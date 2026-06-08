@@ -1,0 +1,47 @@
+{
+  "elements": [
+    {
+      "type": "ExpansionPanel",
+      "caption": "Daten",
+      "items": [
+        {
+          "type": "CheckBox",
+          "name": "CreateStatusVariables",
+          "caption": "Statusvariablen unterhalb der Instanz anlegen"
+        },
+        {
+          "type": "CheckBox",
+          "name": "ShowAdvancedMetrics",
+          "caption": "Zusatzwerte in grosser Kachel anzeigen"
+        }
+      ]
+    },
+    {
+      "type": "ExpansionPanel",
+      "caption": "Kachel",
+      "items": [
+        {
+          "type": "ValidationTextBox",
+          "name": "TileTitle",
+          "caption": "Titel"
+        },
+        {
+          "type": "Select",
+          "name": "AccentColor",
+          "caption": "Akzentfarbe",
+          "options": [
+            { "caption": "IP-Symcon Blau", "value": "symcon" },
+            { "caption": "Gruen", "value": "green" },
+            { "caption": "Orange", "value": "orange" }
+          ]
+        }
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "type": "Label",
+      "caption": "MQTT-Rohpayloads koennen per BAMBU_ProcessPayload($instanceID, $payload) an diese Instanz uebergeben werden."
+    }
+  ]
+}

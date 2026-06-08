@@ -1,0 +1,15 @@
+{
+  "id": "{FD8BCB42-D6F5-491F-A778-AE6D75F65E6E}",
+  "name": "Bambu2Symcon",
+  "type": 3,
+  "vendor": "Bambu Lab",
+  "aliases": [
+    "Bambu2Symcon",
+    "Bambu Drucker"
+  ],
+  "url": "https://github.com/thomic13/Bambu2Symcon",
+  "parentRequirements": [],
+  "childRequirements": [],
+  "implemented": [],
+  "prefix": "BAMBU"
+}

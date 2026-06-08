@@ -1,0 +1,326 @@
+<div class="bambu-tile" data-accent="symcon">
+  <style>
+    .bambu-tile {
+      --bambu-bg: #edf6fb;
+      --bambu-panel: #ffffff;
+      --bambu-text: #102431;
+      --bambu-muted: #637887;
+      --bambu-border: #c9dfe8;
+      --bambu-accent: #1976d2;
+      --bambu-accent-soft: rgba(25, 118, 210, 0.14);
+      --bambu-ok: #24cf79;
+      --bambu-warning: #e4b72f;
+      --bambu-error: #e94d5c;
+      box-sizing: border-box;
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      padding: 14px;
+      overflow: hidden;
+      color: var(--bambu-text);
+      background: linear-gradient(180deg, #edf6fb 0%, #f5fbfd 100%);
+      font-family: inherit;
+    }
+
+    .bambu-tile[data-accent="green"] {
+      --bambu-accent: #1f9d63;
+      --bambu-accent-soft: rgba(31, 157, 99, 0.16);
+    }
+
+    .bambu-tile[data-accent="orange"] {
+      --bambu-accent: #d77916;
+      --bambu-accent-soft: rgba(215, 121, 22, 0.16);
+    }
+
+    .bambu-tile * {
+      box-sizing: border-box;
+    }
+
+    .bambu-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: start;
+      margin-bottom: 10px;
+    }
+
+    .bambu-title {
+      color: var(--bambu-muted);
+      font-size: 12px;
+      line-height: 1;
+      font-weight: 800;
+      text-transform: uppercase;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .bambu-job {
+      margin-top: 4px;
+      color: var(--bambu-text);
+      font-size: 16px;
+      line-height: 1.1;
+      font-weight: 800;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .bambu-status {
+      min-width: 72px;
+      padding: 7px 10px;
+      border-radius: 8px;
+      color: #fff;
+      background: var(--bambu-accent);
+      font-size: 12px;
+      line-height: 1;
+      font-weight: 800;
+      text-align: center;
+      box-shadow: 0 6px 16px rgba(16, 36, 49, 0.12);
+    }
+
+    .bambu-status[data-state="Fertig"],
+    .bambu-status[data-state="Bereit"] {
+      background: var(--bambu-ok);
+      color: #07180f;
+    }
+
+    .bambu-status[data-state="Pausiert"] {
+      background: var(--bambu-warning);
+      color: #241b02;
+    }
+
+    .bambu-status[data-state="Fehler"] {
+      background: var(--bambu-error);
+    }
+
+    .bambu-main {
+      display: grid;
+      grid-template-columns: 132px minmax(0, 1fr);
+      gap: 12px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .bambu-ring {
+      width: 132px;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(circle at center, var(--bambu-panel) 0 58%, transparent 59%),
+        conic-gradient(var(--bambu-accent) calc(var(--progress) * 1%), #d8e8ef 0);
+      box-shadow: inset 0 0 0 1px rgba(16, 36, 49, 0.08), 0 8px 22px rgba(16, 36, 49, 0.10);
+    }
+
+    .bambu-ring-inner {
+      display: grid;
+      place-items: center;
+      width: 94px;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      background: #fff;
+      border: 1px solid rgba(16, 36, 49, 0.08);
+    }
+
+    .bambu-percent {
+      font-size: 28px;
+      line-height: 1;
+      font-weight: 900;
+    }
+
+    .bambu-percent-label {
+      margin-top: 4px;
+      color: var(--bambu-muted);
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .bambu-primary {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .bambu-metric {
+      min-height: 60px;
+      padding: 9px;
+      border: 1px solid var(--bambu-border);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.94);
+      box-shadow: 0 1px 2px rgba(16, 36, 49, 0.08);
+      overflow: hidden;
+    }
+
+    .bambu-metric-label {
+      color: var(--bambu-muted);
+      font-size: 11px;
+      line-height: 1.1;
+      font-weight: 700;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .bambu-metric-value {
+      margin-top: 4px;
+      color: var(--bambu-text);
+      font-size: 17px;
+      line-height: 1;
+      font-weight: 850;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .bambu-metric-target {
+      margin-top: 4px;
+      color: var(--bambu-muted);
+      font-size: 10px;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .bambu-secondary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 7px;
+    }
+
+    .bambu-secondary .bambu-metric {
+      min-height: 50px;
+      padding: 8px;
+      background: rgba(255, 255, 255, 0.78);
+    }
+
+    .bambu-secondary .bambu-metric-value {
+      font-size: 14px;
+    }
+
+    .bambu-updated {
+      margin-top: 8px;
+      color: var(--bambu-muted);
+      font-size: 10px;
+      line-height: 1;
+      text-align: right;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    @container (max-width: 330px) {
+      .bambu-main {
+        grid-template-columns: 112px minmax(0, 1fr);
+      }
+
+      .bambu-ring {
+        width: 112px;
+      }
+
+      .bambu-ring-inner {
+        width: 78px;
+      }
+
+      .bambu-percent {
+        font-size: 23px;
+      }
+    }
+  </style>
+
+  <div class="bambu-head">
+    <div>
+      <div class="bambu-title" data-bind="title"></div>
+      <div class="bambu-job" data-bind="printName"></div>
+    </div>
+    <div class="bambu-status" data-bind="status"></div>
+  </div>
+
+  <div class="bambu-main">
+    <div class="bambu-ring" data-bind="ring">
+      <div class="bambu-ring-inner">
+        <div>
+          <div class="bambu-percent" data-bind="progress"></div>
+          <div class="bambu-percent-label">Fortschritt</div>
+        </div>
+      </div>
+    </div>
+    <div class="bambu-primary" data-bind="primary"></div>
+  </div>
+
+  <div class="bambu-secondary" data-bind="secondary"></div>
+  <div class="bambu-updated" data-bind="updated"></div>
+</div>
+
+<script>
+  (() => {
+    let payload = %%INITIAL_DATA%%;
+    const root = document.currentScript.previousElementSibling;
+
+    const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;'
+    }[char]));
+
+    const formatUpdated = (value) => {
+      if (!value) {
+        return '';
+      }
+
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        return '';
+      }
+
+      return `Aktualisiert ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+    };
+
+    const metricHtml = (metric) => {
+      const target = metric.target ? `<div class="bambu-metric-target">Soll ${escapeHtml(metric.target)}</div>` : '';
+      return `
+        <div class="bambu-metric" data-kind="${escapeHtml(metric.kind)}">
+          <div class="bambu-metric-label">${escapeHtml(metric.label)}</div>
+          <div class="bambu-metric-value">${escapeHtml(metric.value || '--')}</div>
+          ${target}
+        </div>
+      `;
+    };
+
+    const render = () => {
+      const printer = payload.printer || {};
+      const progress = Math.max(0, Math.min(100, Number(printer.progress || 0)));
+
+      root.dataset.accent = payload.accent || 'symcon';
+      root.style.setProperty('--progress', progress);
+      root.querySelector('[data-bind="title"]').textContent = payload.title || 'Bambu';
+      root.querySelector('[data-bind="printName"]').textContent = printer.printName || 'Kein Druckauftrag';
+      root.querySelector('[data-bind="status"]').textContent = printer.statusLabel || 'Unbekannt';
+      root.querySelector('[data-bind="status"]').dataset.state = printer.statusLabel || 'Unbekannt';
+      root.querySelector('[data-bind="progress"]').textContent = `${Math.round(progress)}%`;
+      root.querySelector('[data-bind="primary"]').innerHTML = (payload.metrics?.primary || []).map(metricHtml).join('');
+      root.querySelector('[data-bind="secondary"]').innerHTML = payload.showAdvancedMetrics
+        ? (payload.metrics?.secondary || []).map(metricHtml).join('')
+        : '';
+      root.querySelector('[data-bind="updated"]').textContent = formatUpdated(printer.updatedAt);
+    };
+
+    render();
+
+    window.addEventListener('message', (event) => {
+      if (!event.data) {
+        return;
+      }
+
+      try {
+        payload = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+        render();
+      } catch (error) {
+      }
+    });
+  })();
+</script>
