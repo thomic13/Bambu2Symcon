@@ -18,9 +18,11 @@ class Bambu2Symcon extends IPSModuleStrict
         ['ident' => 'Layer', 'name' => 'Layer', 'type' => 1, 'profile' => ''],
         ['ident' => 'TotalLayers', 'name' => 'Layer Gesamt', 'type' => 1, 'profile' => ''],
         ['ident' => 'WifiSignal', 'name' => 'WLAN Signal', 'type' => 3, 'profile' => ''],
+        ['ident' => 'PrintErrorCode', 'name' => 'Druck Fehlercode', 'type' => 1, 'profile' => ''],
         ['ident' => 'PrintErrorText', 'name' => 'Druck Fehlertext', 'type' => 3, 'profile' => ''],
         ['ident' => 'AmsTemperature', 'name' => 'AMS Temperatur', 'type' => 2, 'profile' => '~Temperature'],
-        ['ident' => 'AmsHumidity', 'name' => 'AMS Feuchte', 'type' => 1, 'profile' => '']
+        ['ident' => 'AmsHumidityLevel', 'name' => 'AMS Feuchtestufe', 'type' => 1, 'profile' => ''],
+        ['ident' => 'AmsHumidity', 'name' => 'AMS Feuchte', 'type' => 1, 'profile' => '~Humidity']
     ];
 
     public function Create(): void
@@ -33,6 +35,7 @@ class Bambu2Symcon extends IPSModuleStrict
         $this->RegisterPropertyString('AccentColor', 'symcon');
         $this->RegisterAttributeString('LastState', json_encode($this->emptyState(), JSON_UNESCAPED_UNICODE));
         $this->RegisterAttributeString('LastPayload', '');
+        $this->RegisterAttributeString('PayloadBuffer', '');
     }
 
     public function ApplyChanges(): void
@@ -60,19 +63,34 @@ class Bambu2Symcon extends IPSModuleStrict
 
     public function ProcessPayload(string $Payload): bool
     {
-        $json = $this->extractJson($Payload);
+        $chunk = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $Payload);
+        if ($chunk === null || $chunk === '') {
+            return false;
+        }
+
+        $buffer = $this->ReadAttributeString('PayloadBuffer') . $chunk;
+        $json = $this->extractJson($buffer);
         if ($json === '') {
+            $this->WriteAttributeString('PayloadBuffer', '');
             $this->SendDebug('Payload', 'Kein JSON-Anfang gefunden', 0);
+            return false;
+        }
+
+        if (strlen($json) > 300000) {
+            $this->WriteAttributeString('PayloadBuffer', '');
+            $this->SendDebug('Payload', 'Buffer verworfen, zu gross', 0);
             return false;
         }
 
         $data = json_decode($json, true);
         if (!is_array($data)) {
-            $this->SendDebug('Payload', 'JSON Fehler: ' . json_last_error_msg(), 0);
+            $this->WriteAttributeString('PayloadBuffer', $json);
+            $this->SendDebug('Payload', 'JSON noch nicht vollstaendig: ' . json_last_error_msg(), 0);
             return false;
         }
 
         $state = $this->parseState($data);
+        $this->WriteAttributeString('PayloadBuffer', '');
         $this->WriteAttributeString('LastPayload', $json);
         $this->WriteAttributeString('LastState', json_encode($state, JSON_UNESCAPED_UNICODE));
 
@@ -125,6 +143,7 @@ class Bambu2Symcon extends IPSModuleStrict
                 $this->metric('WLAN', $state['wifiSignal'], '', 'wifi'),
                 $this->metric('AMS Temp', $this->formatTemperature($state['amsTemperature']), '', 'ams'),
                 $this->metric('AMS Feuchte', $this->formatPercent($state['amsHumidity']), '', 'humidity'),
+                $this->metric('AMS Stufe', $this->formatNumeric($state['amsHumidityLevel']), '', 'humidityLevel'),
                 $this->metric('Fehler', $state['errorText'], '', 'error')
             ]
         ];
@@ -170,8 +189,11 @@ class Bambu2Symcon extends IPSModuleStrict
             'amsTemperature' => $this->firstNumeric([
                 $print['ams']['ams'][0]['temp'] ?? null
             ]),
-            'amsHumidity' => $this->firstNumeric([
+            'amsHumidityLevel' => $this->firstNumeric([
                 $print['ams']['ams'][0]['humidity'] ?? null
+            ]),
+            'amsHumidity' => $this->firstNumeric([
+                $print['ams']['ams'][0]['humidity_raw'] ?? null
             ])
         ];
     }
@@ -196,8 +218,10 @@ class Bambu2Symcon extends IPSModuleStrict
             'Layer' => $state['layer'],
             'TotalLayers' => $state['totalLayers'],
             'WifiSignal' => $state['wifiSignal'],
+            'PrintErrorCode' => $state['errorCode'],
             'PrintErrorText' => $state['errorText'],
             'AmsTemperature' => $state['amsTemperature'],
+            'AmsHumidityLevel' => (int) $state['amsHumidityLevel'],
             'AmsHumidity' => (int) $state['amsHumidity']
         ];
 
@@ -236,6 +260,7 @@ class Bambu2Symcon extends IPSModuleStrict
             'errorCode' => 0,
             'errorText' => 'Kein Fehler',
             'amsTemperature' => 0.0,
+            'amsHumidityLevel' => 0.0,
             'amsHumidity' => 0.0
         ];
     }
@@ -319,6 +344,11 @@ class Bambu2Symcon extends IPSModuleStrict
     private function formatPercent(float $value): string
     {
         return $value > 0 ? sprintf('%.0f %%', $value) : '-- %';
+    }
+
+    private function formatNumeric(float $value): string
+    {
+        return $value > 0 ? sprintf('%.0f', $value) : '--';
     }
 
     private function formatLayer(array $state): string

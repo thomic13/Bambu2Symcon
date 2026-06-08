@@ -7,6 +7,7 @@ Das Modul ist als eigenstaendiger Parser mit Visualisierung gedacht. Optional ko
 ## Funktionen
 
 - Parser fuer Bambu MQTT-Statuspayloads mit `print`-Block.
+- Interner MQTT-Fragmentbuffer fuer RegisterVariable-Datenstroeme.
 - Interner Cache des letzten gueltigen Zustands.
 - Moderne HTML-Kachel mit rundem Fortschrittsring.
 - Anzeige von Druckstatus, Druckname, Fortschritt, Restzeit, Layern, Nozzle-, Bett- und Bauraumtemperatur.
@@ -37,7 +38,7 @@ Das Modul ist als eigenstaendiger Parser mit Visualisierung gedacht. Optional ko
 
 ## MQTT-Payload uebergeben
 
-Die erste Version stellt eine oeffentliche Parser-Methode bereit. Ein MQTT-/RegisterVariable-Skript kann den Rohpayload so uebergeben:
+Ein MQTT-/RegisterVariable-Skript kann den Rohpayload so uebergeben:
 
 ```php
 $instanceID = 12345; // ID der Bambu2Symcon Instanz
@@ -48,7 +49,7 @@ if ($payload !== '') {
 }
 ```
 
-Das Modul sucht automatisch den ersten JSON-Anfang im Payload. Dadurch funktionieren auch Daten, denen vor dem JSON noch MQTT-/Transportbytes vorangestellt sind.
+Das Modul sucht automatisch den ersten JSON-Anfang im Payload und puffert unvollstaendige JSON-Fragmente. Dadurch funktionieren auch RegisterVariable-Datenstroeme, bei denen grosse MQTT-Nachrichten in mehreren Teilen beim Zielskript ankommen.
 
 ## Verarbeitete Felder
 
@@ -66,7 +67,7 @@ Das Modul liest aktuell unter anderem:
 | Bauraum | `print.chamber_temper`, `print.device.ctc.info.temp` |
 | WLAN | `print.wifi_signal` |
 | Fehler | `print.print_error` |
-| AMS | `print.ams.ams.0.temp`, `print.ams.ams.0.humidity` |
+| AMS | `print.ams.ams.0.temp`, `print.ams.ams.0.humidity`, `print.ams.ams.0.humidity_raw` |
 
 ## Design
 
@@ -85,4 +86,3 @@ Bambu2Symcon/
   module.json
   module.php
 ```
-
