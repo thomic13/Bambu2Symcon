@@ -8,6 +8,7 @@ Das Modul ist als eigenstaendiger Parser mit Visualisierung gedacht. Optional ko
 
 - Parser fuer Bambu MQTT-Statuspayloads mit `print`-Block.
 - Interner MQTT-Fragmentbuffer fuer RegisterVariable-Datenstroeme.
+- Direkte Datenfluss-Anbindung an kompatible MQTT-Client-Splitter.
 - Interner Cache des letzten gueltigen Zustands.
 - Moderne HTML-Kachel mit rundem Fortschrittsring.
 - Anzeige von Druckstatus, Druckname, Fortschritt, Restzeit, Layern, Nozzle-, Bett- und Bauraumtemperatur.
@@ -34,11 +35,24 @@ Das Modul ist als eigenstaendiger Parser mit Visualisierung gedacht. Optional ko
 
 4. Eine neue Instanz `Bambu2Symcon` anlegen.
 5. Die Instanz in der Kachelvisualisierung platzieren.
-6. MQTT-Payloads per Skript an die Instanz uebergeben.
+6. Die Instanz mit dem MQTT-Client-Splitter verbinden oder MQTT-Payloads per Skript an die Instanz uebergeben.
+
+## Direkte MQTT-Anbindung
+
+Wenn ein kompatibler MQTT-Client-Splitter vorhanden ist, kann `Bambu2Symcon` direkt darunter betrieben werden. In der Instanzkonfiguration:
+
+```text
+MQTT Topic: device/+/report
+Topic beim Anwenden automatisch abonnieren: aktiv
+```
+
+Danach die Instanz ueber den Parent/Gateway-Dialog mit dem MQTT-Client verbinden, z. B. mit der bestehenden Instanz `MQTT Client Bambulab`.
+
+Das Modul verarbeitet eingehende MQTT-Daten dann direkt ueber den IP-Symcon-Datenfluss. RegisterVariable und Zielskript werden in dieser Variante nicht mehr benoetigt.
 
 ## MQTT-Payload uebergeben
 
-Ein MQTT-/RegisterVariable-Skript kann den Rohpayload so uebergeben:
+Alternativ kann ein MQTT-/RegisterVariable-Skript den Rohpayload weiterhin so uebergeben:
 
 ```php
 $instanceID = 12345; // ID der Bambu2Symcon Instanz

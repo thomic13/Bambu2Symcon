@@ -13,6 +13,16 @@
           "type": "CheckBox",
           "name": "ShowAdvancedMetrics",
           "caption": "Zusatzwerte in grosser Kachel anzeigen"
+        },
+        {
+          "type": "ValidationTextBox",
+          "name": "MqttTopic",
+          "caption": "MQTT Topic"
+        },
+        {
+          "type": "CheckBox",
+          "name": "AutoSubscribe",
+          "caption": "Topic beim Anwenden automatisch abonnieren"
         }
       ]
     },
@@ -41,7 +51,7 @@
   "actions": [
     {
       "type": "Label",
-      "caption": "MQTT-Rohpayloads koennen per BAMBU_ProcessPayload($instanceID, $payload) an diese Instanz uebergeben werden."
+      "caption": "Die Instanz kann direkt mit einem MQTT-Client-Splitter verbunden werden. Alternativ koennen Rohpayloads weiterhin per BAMBU_ProcessPayload($instanceID, $payload) uebergeben werden."
     }
   ]
 }

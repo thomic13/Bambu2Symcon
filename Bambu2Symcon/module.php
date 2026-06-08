@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 class Bambu2Symcon extends IPSModuleStrict
 {
+    private const MQTT_PARENT_TX = '{97475B04-67C3-A74D-C970-E9409B0EFA1D}';
+
     private const STATUS_VARIABLES = [
         ['ident' => 'PrinterStatus', 'name' => 'Status', 'type' => 3, 'profile' => ''],
         ['ident' => 'PrintName', 'name' => 'Druckname', 'type' => 3, 'profile' => ''],
@@ -31,6 +33,8 @@ class Bambu2Symcon extends IPSModuleStrict
 
         $this->RegisterPropertyBoolean('CreateStatusVariables', true);
         $this->RegisterPropertyBoolean('ShowAdvancedMetrics', true);
+        $this->RegisterPropertyString('MqttTopic', 'device/+/report');
+        $this->RegisterPropertyBoolean('AutoSubscribe', true);
         $this->RegisterPropertyString('TileTitle', 'Bambu H2S');
         $this->RegisterPropertyString('AccentColor', 'symcon');
         $this->RegisterAttributeString('LastState', json_encode($this->emptyState(), JSON_UNESCAPED_UNICODE));
@@ -45,6 +49,7 @@ class Bambu2Symcon extends IPSModuleStrict
         $this->SetVisualizationType(1);
         $this->MaintainStatusVariables();
         $this->syncStatusVariables($this->getState());
+        $this->subscribeMqttTopic();
     }
 
     public function GetVisualizationTile(): string
@@ -101,6 +106,39 @@ class Bambu2Symcon extends IPSModuleStrict
         return true;
     }
 
+    public function ReceiveData(string $JSONString): string
+    {
+        $data = json_decode($JSONString, true);
+        if (!is_array($data)) {
+            $this->SendDebug('ReceiveData', 'Ungueltiges Datenpaket', 0);
+            return '';
+        }
+
+        $buffer = (string)($data['Buffer'] ?? '');
+        if ($buffer === '') {
+            return '';
+        }
+
+        $message = json_decode($buffer, true);
+        if (is_array($message)) {
+            $topic = (string)($message['TOPIC'] ?? $message['Topic'] ?? $message['topic'] ?? '');
+            $payload = (string)($message['MSG'] ?? $message['Payload'] ?? $message['payload'] ?? $message['Message'] ?? '');
+
+            if (!$this->topicMatches($topic)) {
+                return '';
+            }
+
+            if ($payload !== '') {
+                $this->ProcessPayload($payload);
+            }
+
+            return '';
+        }
+
+        $this->ProcessPayload($buffer);
+        return '';
+    }
+
     public function MaintainStatusVariables(): void
     {
         $enabled = $this->ReadPropertyBoolean('CreateStatusVariables');
@@ -127,6 +165,48 @@ class Bambu2Symcon extends IPSModuleStrict
             'printer' => $state,
             'metrics' => $this->buildMetrics($state)
         ];
+    }
+
+    private function subscribeMqttTopic(): void
+    {
+        if (!$this->ReadPropertyBoolean('AutoSubscribe')) {
+            return;
+        }
+
+        $topic = trim($this->ReadPropertyString('MqttTopic'));
+        if ($topic === '') {
+            return;
+        }
+
+        $command = json_encode([
+            'Function' => 'Subscribe',
+            'Topic' => $topic
+        ], JSON_UNESCAPED_UNICODE);
+
+        if ($command === false) {
+            return;
+        }
+
+        try {
+            $this->SendDataToParent(json_encode([
+                'DataID' => self::MQTT_PARENT_TX,
+                'Buffer' => $command
+            ], JSON_UNESCAPED_UNICODE));
+        } catch (Throwable $exception) {
+            $this->SendDebug('Subscribe', $exception->getMessage(), 0);
+        }
+    }
+
+    private function topicMatches(string $topic): bool
+    {
+        $filter = trim($this->ReadPropertyString('MqttTopic'));
+        if ($filter === '' || $topic === '') {
+            return true;
+        }
+
+        $pattern = preg_quote($filter, '/');
+        $pattern = str_replace(['\+', '\#'], ['[^/]+', '.*'], $pattern);
+        return preg_match('/^' . $pattern . '$/', $topic) === 1;
     }
 
     private function buildMetrics(array $state): array
