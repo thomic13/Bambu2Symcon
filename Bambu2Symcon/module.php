@@ -204,7 +204,7 @@ class Bambu2Symcon extends IPSModuleStrict
         foreach ($values as $ident => $value) {
             $objectID = @IPS_GetObjectIDByIdent($ident, $this->InstanceID);
             if ($objectID !== false) {
-                SetValue($objectID, $value);
+                $this->SetValue($ident, $value);
             }
         }
     }
