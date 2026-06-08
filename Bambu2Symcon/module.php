@@ -178,6 +178,12 @@ class Bambu2Symcon extends IPSModuleStrict
             return;
         }
 
+        $instance = IPS_GetInstance($this->InstanceID);
+        if (($instance['ConnectionID'] ?? 0) === 0) {
+            $this->SendDebug('Subscribe', 'Kein MQTT-Gateway verbunden, Auto-Subscribe uebersprungen', 0);
+            return;
+        }
+
         $command = json_encode([
             'Function' => 'Subscribe',
             'Topic' => $topic
