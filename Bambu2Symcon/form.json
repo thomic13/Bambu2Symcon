@@ -55,6 +55,11 @@
           "type": "CheckBox",
           "name": "AutoSubscribe",
           "caption": "Nach Verbindung automatisch abonnieren"
+        },
+        {
+          "type": "CheckBox",
+          "name": "AutoReconnect",
+          "caption": "Verbindung bei ausbleibenden Daten automatisch neu aufbauen"
         }
       ]
     },

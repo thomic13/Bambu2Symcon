@@ -40,6 +40,7 @@ class Bambu2Symcon extends IPSModuleStrict
         $this->RegisterPropertyInteger('KeepAliveInterval', 60);
         $this->RegisterPropertyBoolean('AutoConnect', false);
         $this->RegisterPropertyBoolean('AutoSubscribe', true);
+        $this->RegisterPropertyBoolean('AutoReconnect', true);
         $this->RegisterPropertyBoolean('CreateStatusVariables', true);
         $this->RegisterPropertyBoolean('ShowAdvancedMetrics', true);
         $this->RegisterPropertyString('TileTitle', 'Bambu H2S');
@@ -50,7 +51,10 @@ class Bambu2Symcon extends IPSModuleStrict
         $this->RegisterAttributeString('NetworkBuffer', '');
         $this->RegisterAttributeBoolean('MqttConnected', false);
         $this->RegisterAttributeInteger('PacketIdentifier', 1);
+        $this->RegisterAttributeInteger('LastPayloadTimestamp', 0);
+        $this->RegisterAttributeInteger('LastReconnectAttempt', 0);
         $this->RegisterTimer('KeepAliveTimer', 0, 'BAMBU_MqttPing($_IPS["TARGET"]);');
+        $this->RegisterTimer('ConnectionWatchdogTimer', 0, 'BAMBU_CheckConnection($_IPS["TARGET"]);');
     }
 
     public function ApplyChanges(): void
@@ -61,6 +65,7 @@ class Bambu2Symcon extends IPSModuleStrict
         $this->MaintainStatusVariables();
         $this->syncStatusVariables($this->getState());
         $this->SetTimerInterval('KeepAliveTimer', 0);
+        $this->SetTimerInterval('ConnectionWatchdogTimer', $this->ReadPropertyBoolean('AutoReconnect') ? 30000 : 0);
 
         if ($this->ReadPropertyBoolean('AutoConnect')) {
             $this->ConnectMqtt();
@@ -113,6 +118,7 @@ class Bambu2Symcon extends IPSModuleStrict
         $this->WriteAttributeString('PayloadBuffer', '');
         $this->WriteAttributeString('LastPayload', $json);
         $this->WriteAttributeString('LastState', json_encode($state, JSON_UNESCAPED_UNICODE));
+        $this->WriteAttributeInteger('LastPayloadTimestamp', time());
 
         $this->MaintainStatusVariables();
         $this->syncStatusVariables($state);
@@ -129,6 +135,30 @@ class Bambu2Symcon extends IPSModuleStrict
         );
 
         return true;
+    }
+
+    public function CheckConnection(): void
+    {
+        if (!$this->ReadPropertyBoolean('AutoReconnect') || !$this->hasParent()) {
+            return;
+        }
+
+        $reference = $this->ReadAttributeInteger('LastPayloadTimestamp');
+        if ($reference <= 0) {
+            $reference = $this->ReadAttributeInteger('LastReconnectAttempt');
+        }
+
+        if ($reference <= 0 || time() - $reference < max(120, $this->ReadPropertyInteger('KeepAliveInterval') * 2)) {
+            return;
+        }
+
+        $lastAttempt = $this->ReadAttributeInteger('LastReconnectAttempt');
+        if ($lastAttempt > 0 && time() - $lastAttempt < 60) {
+            return;
+        }
+
+        $this->SendDebug('MQTT', 'Keine Payload mehr empfangen, Verbindung wird neu aufgebaut', 0);
+        $this->ConnectMqtt();
     }
 
     public function ReceiveData(string $JSONString): string
@@ -159,6 +189,8 @@ class Bambu2Symcon extends IPSModuleStrict
             return false;
         }
 
+        $this->ensureParentSocketOpen();
+
         $clientID = trim($this->ReadPropertyString('ClientID'));
         if ($clientID === '') {
             $clientID = 'Bambu2Symcon-' . $this->InstanceID;
@@ -181,6 +213,7 @@ class Bambu2Symcon extends IPSModuleStrict
 
         $this->WriteAttributeBoolean('MqttConnected', false);
         $this->WriteAttributeString('NetworkBuffer', '');
+        $this->WriteAttributeInteger('LastReconnectAttempt', time());
         if (!$this->sendToSocket($packet)) {
             return false;
         }
@@ -274,6 +307,31 @@ class Bambu2Symcon extends IPSModuleStrict
         }
 
         return true;
+    }
+
+    private function ensureParentSocketOpen(): void
+    {
+        $instance = IPS_GetInstance($this->InstanceID);
+        $connectionID = (int)($instance['ConnectionID'] ?? 0);
+        if ($connectionID <= 0) {
+            return;
+        }
+
+        $connection = IPS_GetInstance($connectionID);
+        if ((int)($connection['InstanceStatus'] ?? 0) === 102) {
+            return;
+        }
+
+        try {
+            @IPS_SetProperty($connectionID, 'Open', false);
+            @IPS_ApplyChanges($connectionID);
+            IPS_Sleep(250);
+            @IPS_SetProperty($connectionID, 'Open', true);
+            @IPS_ApplyChanges($connectionID);
+            $this->SendDebug('Socket', 'Client Socket wurde neu geoeffnet', 0);
+        } catch (Throwable $exception) {
+            $this->SendDebug('Socket', 'Client Socket konnte nicht neu geoeffnet werden: ' . $exception->getMessage(), 0);
+        }
     }
 
     private function handleMqttBytes(string $bytes): void
