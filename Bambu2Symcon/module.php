@@ -37,7 +37,7 @@ class Bambu2Symcon extends IPSModuleStrict
         $this->RegisterPropertyString('UserName', 'bblp');
         $this->RegisterPropertyString('Password', '');
         $this->RegisterPropertyInteger('KeepAliveInterval', 60);
-        $this->RegisterPropertyBoolean('AutoConnect', true);
+        $this->RegisterPropertyBoolean('AutoConnect', false);
         $this->RegisterPropertyBoolean('AutoSubscribe', true);
         $this->RegisterPropertyBoolean('CreateStatusVariables', true);
         $this->RegisterPropertyBoolean('ShowAdvancedMetrics', true);
@@ -47,6 +47,7 @@ class Bambu2Symcon extends IPSModuleStrict
         $this->RegisterAttributeString('LastPayload', '');
         $this->RegisterAttributeString('PayloadBuffer', '');
         $this->RegisterAttributeString('NetworkBuffer', '');
+        $this->RegisterAttributeBoolean('MqttConnected', false);
         $this->RegisterAttributeInteger('PacketIdentifier', 1);
         $this->RegisterTimer('KeepAliveTimer', 0, 'BAMBU_MqttPing($_IPS["TARGET"]);');
     }
@@ -58,7 +59,7 @@ class Bambu2Symcon extends IPSModuleStrict
         $this->SetVisualizationType(1);
         $this->MaintainStatusVariables();
         $this->syncStatusVariables($this->getState());
-        $this->SetTimerInterval('KeepAliveTimer', max(15, $this->ReadPropertyInteger('KeepAliveInterval')) * 500);
+        $this->SetTimerInterval('KeepAliveTimer', 0);
 
         if ($this->ReadPropertyBoolean('AutoConnect')) {
             $this->ConnectMqtt();
@@ -155,6 +156,7 @@ class Bambu2Symcon extends IPSModuleStrict
             max(15, $this->ReadPropertyInteger('KeepAliveInterval'))
         );
 
+        $this->WriteAttributeBoolean('MqttConnected', false);
         $this->WriteAttributeString('NetworkBuffer', '');
         if (!$this->sendToSocket($packet)) {
             return false;
@@ -168,6 +170,11 @@ class Bambu2Symcon extends IPSModuleStrict
     {
         if (!$this->hasParent()) {
             $this->SendDebug('MQTT', 'Kein Client Socket verbunden', 0);
+            return false;
+        }
+
+        if (!$this->ReadAttributeBoolean('MqttConnected')) {
+            $this->SendDebug('MQTT', 'Noch nicht per MQTT verbunden, SUBSCRIBE uebersprungen', 0);
             return false;
         }
 
@@ -187,7 +194,7 @@ class Bambu2Symcon extends IPSModuleStrict
 
     public function MqttPing(): void
     {
-        if ($this->hasParent()) {
+        if ($this->hasParent() && $this->ReadAttributeBoolean('MqttConnected')) {
             $this->sendToSocket(chr(0xC0) . chr(0x00));
         }
     }
@@ -229,7 +236,7 @@ class Bambu2Symcon extends IPSModuleStrict
     private function sendToSocket(string $buffer): bool
     {
         try {
-            $this->SendDataToParent(json_encode([
+            @$this->SendDataToParent(json_encode([
                 'DataID' => self::CLIENT_SOCKET_TX,
                 'Buffer' => $this->encodeIpsBuffer($buffer)
             ], JSON_UNESCAPED_UNICODE));
@@ -319,6 +326,8 @@ class Bambu2Symcon extends IPSModuleStrict
             return;
         }
 
+        $this->WriteAttributeBoolean('MqttConnected', true);
+        $this->SetTimerInterval('KeepAliveTimer', max(15, $this->ReadPropertyInteger('KeepAliveInterval')) * 500);
         $this->SendDebug('MQTT', 'CONNACK OK', 0);
         if ($this->ReadPropertyBoolean('AutoSubscribe')) {
             $this->SubscribeMqtt();

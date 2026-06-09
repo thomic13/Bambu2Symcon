@@ -61,11 +61,13 @@ Client ID: Bambu2Symcon
 Benutzername: bblp
 Passwort / Access Code: Zugriffscode des Druckers
 KeepAlive: 60 Sekunden
-Beim Anwenden automatisch verbinden: aktiv
+Beim Anwenden automatisch verbinden: fuer den ersten Test deaktiviert lassen
 Nach Verbindung automatisch abonnieren: aktiv
 ```
 
 Das Modul verarbeitet eingehende MQTT-PUBLISH-Pakete direkt ueber den IP-Symcon-Datenfluss. RegisterVariable und Zielskript werden in dieser Variante nicht mehr benoetigt.
+
+Zum ersten Test erst die Client-Socket-Instanz verbinden lassen und danach in der `Bambu2Symcon`-Instanz den Button `MQTT verbinden` ausfuehren. Erst wenn im Debug `CONNACK OK` erscheint, ist der MQTT-Handshake erfolgreich.
 
 ## MQTT-Payload uebergeben
 
