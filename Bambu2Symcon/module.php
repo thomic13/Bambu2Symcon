@@ -246,7 +246,7 @@ class Bambu2Symcon extends IPSModuleStrict
         }
 
         try {
-            @CSCK_SendText($connectionID, utf8_encode($buffer));
+            @CSCK_SendText($connectionID, $buffer);
         } catch (Throwable $exception) {
             $this->SendDebug('Socket', $exception->getMessage(), 0);
             return false;
