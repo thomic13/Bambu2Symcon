@@ -36,6 +36,7 @@ class Bambu2Symcon extends IPSModuleStrict
         $this->RegisterPropertyString('ClientID', 'Bambu2Symcon');
         $this->RegisterPropertyString('UserName', 'bblp');
         $this->RegisterPropertyString('Password', '');
+        $this->RegisterPropertyInteger('MqttProtocolLevel', 4);
         $this->RegisterPropertyInteger('KeepAliveInterval', 60);
         $this->RegisterPropertyBoolean('AutoConnect', false);
         $this->RegisterPropertyBoolean('AutoSubscribe', true);
@@ -153,7 +154,8 @@ class Bambu2Symcon extends IPSModuleStrict
             $clientID,
             $this->ReadPropertyString('UserName'),
             $this->ReadPropertyString('Password'),
-            max(15, $this->ReadPropertyInteger('KeepAliveInterval'))
+            max(15, $this->ReadPropertyInteger('KeepAliveInterval')),
+            $this->ReadPropertyInteger('MqttProtocolLevel')
         );
 
         $this->WriteAttributeBoolean('MqttConnected', false);
@@ -162,6 +164,7 @@ class Bambu2Symcon extends IPSModuleStrict
             return false;
         }
 
+        $this->SendDebug('MQTT CONNECT HEX', bin2hex($packet), 0);
         $this->SendDebug('MQTT', 'CONNECT gesendet', 0);
         return true;
     }
@@ -372,7 +375,7 @@ class Bambu2Symcon extends IPSModuleStrict
         return $index;
     }
 
-    private function buildConnectPacket(string $clientID, string $username, string $password, int $keepAlive): string
+    private function buildConnectPacket(string $clientID, string $username, string $password, int $keepAlive, int $protocolLevel): string
     {
         $flags = 0x02;
         if ($username !== '') {
@@ -383,7 +386,12 @@ class Bambu2Symcon extends IPSModuleStrict
             $flags |= 0x40;
         }
 
-        $variableHeader = $this->mqttString('MQTT') . chr(4) . chr($flags) . pack('n', $keepAlive);
+        if ($protocolLevel === 3) {
+            $variableHeader = $this->mqttString('MQIsdp') . chr(3) . chr($flags) . pack('n', $keepAlive);
+        } else {
+            $variableHeader = $this->mqttString('MQTT') . chr(4) . chr($flags) . pack('n', $keepAlive);
+        }
+
         $payload = $this->mqttString($clientID);
 
         if ($username !== '') {
