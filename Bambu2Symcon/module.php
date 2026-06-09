@@ -21,7 +21,10 @@ class Bambu2Symcon extends IPSModuleStrict
         ['ident' => 'TotalLayers', 'name' => 'Layer Gesamt', 'type' => 1, 'profile' => ''],
         ['ident' => 'WifiSignal', 'name' => 'WLAN Signal', 'type' => 3, 'profile' => ''],
         ['ident' => 'PrintErrorCode', 'name' => 'Druck Fehlercode', 'type' => 1, 'profile' => ''],
-        ['ident' => 'PrintErrorText', 'name' => 'Druck Fehlertext', 'type' => 3, 'profile' => ''],
+        ['ident' => 'PrintErrorText', 'name' => 'Druck Fehlertext', 'type' => 3, 'profile' => '']
+    ];
+
+    private const ADVANCED_VARIABLES = [
         ['ident' => 'AmsTemperature', 'name' => 'AMS Temperatur', 'type' => 2, 'profile' => '~Temperature'],
         ['ident' => 'AmsHumidity', 'name' => 'AMS Feuchte', 'type' => 1, 'profile' => '~Humidity']
     ];
@@ -41,6 +44,7 @@ class Bambu2Symcon extends IPSModuleStrict
         $this->RegisterPropertyBoolean('AutoSubscribe', true);
         $this->RegisterPropertyBoolean('AutoReconnect', true);
         $this->RegisterPropertyBoolean('CreateStatusVariables', true);
+        $this->RegisterPropertyBoolean('CreateAdvancedVariables', false);
         $this->RegisterPropertyBoolean('ShowAdvancedMetrics', true);
         $this->RegisterPropertyString('TileTitle', 'Bambu H2S');
         $this->RegisterPropertyString('AccentColor', 'symcon');
@@ -260,7 +264,7 @@ class Bambu2Symcon extends IPSModuleStrict
 
     public function MaintainStatusVariables(): void
     {
-        $enabled = $this->ReadPropertyBoolean('CreateStatusVariables');
+        $statusEnabled = $this->ReadPropertyBoolean('CreateStatusVariables');
         foreach (self::STATUS_VARIABLES as $index => $variable) {
             $this->MaintainVariable(
                 $variable['ident'],
@@ -268,7 +272,19 @@ class Bambu2Symcon extends IPSModuleStrict
                 $variable['type'],
                 $variable['profile'],
                 $index + 1,
-                $enabled
+                $statusEnabled
+            );
+        }
+
+        $advancedEnabled = $this->ReadPropertyBoolean('CreateAdvancedVariables');
+        foreach (self::ADVANCED_VARIABLES as $index => $variable) {
+            $this->MaintainVariable(
+                $variable['ident'],
+                $variable['name'],
+                $variable['type'],
+                $variable['profile'],
+                count(self::STATUS_VARIABLES) + $index + 1,
+                $advancedEnabled
             );
         }
 
@@ -734,11 +750,17 @@ class Bambu2Symcon extends IPSModuleStrict
 
     private function syncStatusVariables(array $state): void
     {
-        if (!$this->ReadPropertyBoolean('CreateStatusVariables')) {
+        $statusEnabled = $this->ReadPropertyBoolean('CreateStatusVariables');
+        $advancedEnabled = $this->ReadPropertyBoolean('CreateAdvancedVariables');
+
+        if (!$statusEnabled && !$advancedEnabled) {
             return;
         }
 
-        $values = [
+        $values = [];
+
+        if ($statusEnabled) {
+            $values = [
             'PrinterStatus' => $state['statusLabel'],
             'PrintName' => $state['printName'],
             'Progress' => $state['progress'],
@@ -753,10 +775,16 @@ class Bambu2Symcon extends IPSModuleStrict
             'TotalLayers' => $state['totalLayers'],
             'WifiSignal' => $state['wifiSignal'],
             'PrintErrorCode' => $state['errorCode'],
-            'PrintErrorText' => $state['errorText'],
-            'AmsTemperature' => $state['amsTemperature'],
-            'AmsHumidity' => (int) $state['amsHumidity']
-        ];
+            'PrintErrorText' => $state['errorText']
+            ];
+        }
+
+        if ($advancedEnabled) {
+            $values += [
+                'AmsTemperature' => $state['amsTemperature'],
+                'AmsHumidity' => (int) $state['amsHumidity']
+            ];
+        }
 
         foreach ($values as $ident => $value) {
             $objectID = @IPS_GetObjectIDByIdent($ident, $this->InstanceID);
