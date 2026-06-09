@@ -832,7 +832,7 @@ class Bambu2Symcon extends IPSModuleStrict
             }
 
             $this->SetValue($materialIdent, (string)($filament['name'] ?? 'Unbekannt'));
-            $this->SetValue($colorIdent, (string)($filament['color'] ?? ''));
+            $this->SetValue($colorIdent, $this->colorToSymconRgbValue((string)($filament['color'] ?? '')));
             $this->SetValue($remainingIdent, (int)round((float)($filament['remaining'] ?? 0)));
         }
     }
@@ -1081,6 +1081,20 @@ class Bambu2Symcon extends IPSModuleStrict
         }
 
         return '';
+    }
+
+    private function colorToSymconRgbValue(string $value): string
+    {
+        $color = $this->normalizeColor($value);
+        if ($color === '') {
+            return '';
+        }
+
+        return json_encode([
+            'r' => hexdec(substr($color, 1, 2)),
+            'g' => hexdec(substr($color, 3, 2)),
+            'b' => hexdec(substr($color, 5, 2))
+        ]);
     }
 
     private function statusLabel(string $status): string
