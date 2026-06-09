@@ -15,6 +15,10 @@
           "caption": "MQTT Topic"
         },
         {
+          "type": "Label",
+          "caption": "Standard: device/{SERIAL}/report. {SERIAL} wird durch die Drucker-Seriennummer ersetzt."
+        },
+        {
           "type": "ValidationTextBox",
           "name": "ClientID",
           "caption": "Client ID"

@@ -31,7 +31,7 @@ class Bambu2Symcon extends IPSModuleStrict
         parent::Create();
 
         $this->RegisterPropertyString('PrinterSerial', '0938BC612702364');
-        $this->RegisterPropertyString('MqttTopic', 'device/0938BC612702364/report');
+        $this->RegisterPropertyString('MqttTopic', 'device/{SERIAL}/report');
         $this->RegisterPropertyString('ClientID', 'Bambu2Symcon');
         $this->RegisterPropertyString('UserName', 'bblp');
         $this->RegisterPropertyString('Password', '');
@@ -237,7 +237,7 @@ class Bambu2Symcon extends IPSModuleStrict
             return false;
         }
 
-        $topic = trim($this->ReadPropertyString('MqttTopic'));
+        $topic = $this->resolveMqttTopic();
         if ($topic === '') {
             $this->SendDebug('MQTT', 'Kein Topic konfiguriert', 0);
             return false;
@@ -567,7 +567,7 @@ class Bambu2Symcon extends IPSModuleStrict
 
     private function topicMatches(string $topic): bool
     {
-        $filter = trim($this->ReadPropertyString('MqttTopic'));
+        $filter = $this->resolveMqttTopic();
         if ($filter === '' || $topic === '') {
             return true;
         }
@@ -575,6 +575,22 @@ class Bambu2Symcon extends IPSModuleStrict
         $pattern = preg_quote($filter, '/');
         $pattern = str_replace(['\+', '\#'], ['[^/]+', '.*'], $pattern);
         return preg_match('/^' . $pattern . '$/', $topic) === 1;
+    }
+
+    private function resolveMqttTopic(): string
+    {
+        $topic = trim($this->ReadPropertyString('MqttTopic'));
+        $serial = trim($this->ReadPropertyString('PrinterSerial'));
+
+        if ($topic === '') {
+            $topic = 'device/{SERIAL}/report';
+        }
+
+        if ($serial !== '') {
+            $topic = str_replace(['{SERIAL}', '%SERIAL%'], $serial, $topic);
+        }
+
+        return $topic;
     }
 
     private function encodeIpsBuffer(string $buffer): string
