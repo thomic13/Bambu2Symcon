@@ -714,38 +714,100 @@ class Bambu2Symcon extends IPSModuleStrict
     private function parseState(array $data): array
     {
         $print = is_array($data['print'] ?? null) ? $data['print'] : $data;
-        $remainingMinutes = $this->intValue($print, ['mc_remaining_time', 'remain_time']);
-        $printError = $this->intValue($print, ['print_error']);
+        $state = array_replace($this->emptyState(), $this->getState());
+        $state['updatedAt'] = date('c');
 
-        return [
-            'updatedAt' => date('c'),
-            'status' => $this->stringValue($print, ['gcode_state', 'print_status']),
-            'statusLabel' => $this->statusLabel($this->stringValue($print, ['gcode_state', 'print_status'])),
-            'printName' => $this->stringValue($print, ['subtask_name', 'project_name', 'gcode_file']),
-            'progress' => max(0, min(100, $this->intValue($print, ['mc_percent', 'percent']))),
-            'remainingMinutes' => $remainingMinutes,
-            'remainingText' => $this->formatRemaining($remainingMinutes),
-            'layer' => $this->intValue($print, ['layer_num']),
-            'totalLayers' => $this->intValue($print, ['total_layer_num']),
-            'nozzleTemperature' => $this->floatValue($print, ['nozzle_temper']),
-            'nozzleTargetTemperature' => $this->floatValue($print, ['nozzle_target_temper']),
-            'bedTemperature' => $this->floatValue($print, ['bed_temper']),
-            'bedTargetTemperature' => $this->floatValue($print, ['bed_target_temper']),
-            'chamberTemperature' => $this->firstNumeric([
-                $print['chamber_temper'] ?? null,
-                $print['device']['ctc']['info']['temp'] ?? null
-            ]),
-            'wifiSignal' => $this->stringValue($print, ['wifi_signal']),
-            'errorCode' => $printError,
-            'errorText' => $printError === 0 ? 'Kein Fehler' : 'Fehler ' . $printError,
-            'amsTemperature' => $this->firstNumeric([
-                $print['ams']['ams'][0]['temp'] ?? null
-            ]),
-            'amsHumidity' => $this->firstNumeric([
-                $print['ams']['ams'][0]['humidity_raw'] ?? null
-            ]),
-            'amsFilaments' => $this->parseAmsFilaments($print)
-        ];
+        $status = $this->stringValue($print, ['gcode_state', 'print_status']);
+        if ($status !== '') {
+            $state['status'] = $status;
+            $state['statusLabel'] = $this->statusLabel($status);
+        }
+
+        $printName = $this->stringValue($print, ['subtask_name', 'project_name', 'gcode_file']);
+        if ($printName !== '') {
+            $state['printName'] = $printName;
+        } elseif ($status !== '' && in_array(strtoupper($status), ['IDLE', 'FINISH', 'FINISHED'], true)) {
+            $state['printName'] = '';
+        }
+
+        $progress = $this->numericValueOrNull($print, ['mc_percent', 'percent']);
+        if ($progress !== null) {
+            $state['progress'] = max(0, min(100, (int)$progress));
+        }
+
+        $remainingMinutes = $this->numericValueOrNull($print, ['mc_remaining_time', 'remain_time']);
+        if ($remainingMinutes !== null) {
+            $state['remainingMinutes'] = (int)$remainingMinutes;
+            $state['remainingText'] = $this->formatRemaining((int)$remainingMinutes);
+        }
+
+        $layer = $this->firstNumericOrNull([
+            $print['layer_num'] ?? null,
+            $print['3D']['layer_num'] ?? null
+        ]);
+        if ($layer !== null) {
+            $state['layer'] = (int)$layer;
+        }
+
+        $totalLayers = $this->firstNumericOrNull([
+            $print['total_layer_num'] ?? null,
+            $print['3D']['total_layer_num'] ?? null
+        ]);
+        if ($totalLayers !== null) {
+            $state['totalLayers'] = (int)$totalLayers;
+        }
+
+        foreach ([
+            'nozzleTemperature' => ['nozzle_temper'],
+            'nozzleTargetTemperature' => ['nozzle_target_temper'],
+            'bedTemperature' => ['bed_temper'],
+            'bedTargetTemperature' => ['bed_target_temper']
+        ] as $stateKey => $keys) {
+            $value = $this->numericValueOrNull($print, $keys);
+            if ($value !== null) {
+                $state[$stateKey] = (float)$value;
+            }
+        }
+
+        $chamberTemperature = $this->firstNumericOrNull([
+            $print['chamber_temper'] ?? null,
+            $print['device']['ctc']['info']['temp'] ?? null
+        ]);
+        if ($chamberTemperature !== null) {
+            $state['chamberTemperature'] = (float)$chamberTemperature;
+        }
+
+        $wifiSignal = $this->stringValue($print, ['wifi_signal']);
+        if ($wifiSignal !== '') {
+            $state['wifiSignal'] = $wifiSignal;
+        }
+
+        $printError = $this->numericValueOrNull($print, ['print_error']);
+        if ($printError !== null) {
+            $state['errorCode'] = (int)$printError;
+            $state['errorText'] = (int)$printError === 0 ? 'Kein Fehler' : 'Fehler ' . (int)$printError;
+        }
+
+        $amsTemperature = $this->firstNumericOrNull([
+            $print['ams']['ams'][0]['temp'] ?? null
+        ]);
+        if ($amsTemperature !== null) {
+            $state['amsTemperature'] = (float)$amsTemperature;
+        }
+
+        $amsHumidity = $this->firstNumericOrNull([
+            $print['ams']['ams'][0]['humidity_raw'] ?? null
+        ]);
+        if ($amsHumidity !== null) {
+            $state['amsHumidity'] = (float)$amsHumidity;
+        }
+
+        $amsFilaments = $this->parseAmsFilaments($print);
+        if ($amsFilaments !== []) {
+            $state['amsFilaments'] = $amsFilaments;
+        }
+
+        return $state;
     }
 
     private function syncStatusVariables(array $state): void
@@ -990,6 +1052,17 @@ class Bambu2Symcon extends IPSModuleStrict
         }
 
         return 0.0;
+    }
+
+    private function numericValueOrNull(array $data, array $keys): ?float
+    {
+        foreach ($keys as $key) {
+            if (isset($data[$key]) && is_numeric($data[$key])) {
+                return (float)$data[$key];
+            }
+        }
+
+        return null;
     }
 
     private function firstNumeric(array $values): float
