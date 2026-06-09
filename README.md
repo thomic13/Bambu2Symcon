@@ -50,6 +50,8 @@ Port: 8883 oder der am Drucker genutzte MQTT-Port
 SSL: je nach Drucker-/Symcon-Konfiguration
 ```
 
+Wichtig: Diese Client-Socket-Instanz darf nicht gleichzeitig als Parent eines separaten IP-Symcon MQTT-Client-Splitters genutzt werden. Pro TCP-Verbindung darf nur ein MQTT-Client sprechen. Fuer Tests entweder eine eigene Client-Socket-Instanz fuer `Bambu2Symcon` anlegen oder den bisherigen MQTT-Client-Splitter/Bridge-Weg deaktivieren.
+
 Bambu2Symcon:
 
 ```text

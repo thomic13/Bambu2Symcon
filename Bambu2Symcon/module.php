@@ -155,7 +155,11 @@ class Bambu2Symcon extends IPSModuleStrict
             max(15, $this->ReadPropertyInteger('KeepAliveInterval'))
         );
 
-        $this->sendToSocket($packet);
+        $this->WriteAttributeString('NetworkBuffer', '');
+        if (!$this->sendToSocket($packet)) {
+            return false;
+        }
+
         $this->SendDebug('MQTT', 'CONNECT gesendet', 0);
         return true;
     }
@@ -173,7 +177,10 @@ class Bambu2Symcon extends IPSModuleStrict
             return false;
         }
 
-        $this->sendToSocket($this->buildSubscribePacket($topic));
+        if (!$this->sendToSocket($this->buildSubscribePacket($topic))) {
+            return false;
+        }
+
         $this->SendDebug('MQTT', 'SUBSCRIBE gesendet: ' . $topic, 0);
         return true;
     }
@@ -219,12 +226,19 @@ class Bambu2Symcon extends IPSModuleStrict
         return ($instance['ConnectionID'] ?? 0) > 0;
     }
 
-    private function sendToSocket(string $buffer): void
+    private function sendToSocket(string $buffer): bool
     {
-        $this->SendDataToParent(json_encode([
-            'DataID' => self::CLIENT_SOCKET_TX,
-            'Buffer' => $this->encodeIpsBuffer($buffer)
-        ], JSON_UNESCAPED_UNICODE));
+        try {
+            $this->SendDataToParent(json_encode([
+                'DataID' => self::CLIENT_SOCKET_TX,
+                'Buffer' => $this->encodeIpsBuffer($buffer)
+            ], JSON_UNESCAPED_UNICODE));
+        } catch (Throwable $exception) {
+            $this->SendDebug('Socket', $exception->getMessage(), 0);
+            return false;
+        }
+
+        return true;
     }
 
     private function handleMqttBytes(string $bytes): void
