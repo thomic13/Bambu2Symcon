@@ -238,11 +238,15 @@ class Bambu2Symcon extends IPSModuleStrict
 
     private function sendToSocket(string $buffer): bool
     {
+        $instance = IPS_GetInstance($this->InstanceID);
+        $connectionID = (int)($instance['ConnectionID'] ?? 0);
+        if ($connectionID <= 0) {
+            $this->SendDebug('Socket', 'Kein Client Socket verbunden', 0);
+            return false;
+        }
+
         try {
-            @$this->SendDataToParent(json_encode([
-                'DataID' => self::CLIENT_SOCKET_TX,
-                'Buffer' => $this->encodeIpsBuffer($buffer)
-            ], JSON_UNESCAPED_UNICODE));
+            @CSCK_SendText($connectionID, utf8_encode($buffer));
         } catch (Throwable $exception) {
             $this->SendDebug('Socket', $exception->getMessage(), 0);
             return false;
