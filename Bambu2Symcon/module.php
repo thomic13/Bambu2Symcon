@@ -151,10 +151,17 @@ class Bambu2Symcon extends IPSModuleStrict
             $clientID = 'Bambu2Symcon-' . $this->InstanceID;
         }
 
+        $username = trim($this->ReadPropertyString('UserName'));
+        $password = $this->ReadPropertyString('Password');
+        if ($username === '' || $password === '') {
+            $this->SendDebug('MQTT', 'Benutzername oder Passwort / Access Code fehlt', 0);
+            return false;
+        }
+
         $packet = $this->buildConnectPacket(
             $clientID,
-            $this->ReadPropertyString('UserName'),
-            $this->ReadPropertyString('Password'),
+            $username,
+            $password,
             max(15, $this->ReadPropertyInteger('KeepAliveInterval')),
             $this->ReadPropertyInteger('MqttProtocolLevel')
         );
@@ -352,7 +359,7 @@ class Bambu2Symcon extends IPSModuleStrict
 
         $returnCode = ord($body[1]);
         if ($returnCode !== 0) {
-            $this->SendDebug('MQTT', 'CONNACK Fehlercode: ' . $returnCode, 0);
+            $this->SendDebug('MQTT', 'CONNACK Fehlercode ' . $returnCode . ': ' . $this->mqttConnackErrorText($returnCode), 0);
             return;
         }
 
@@ -362,6 +369,18 @@ class Bambu2Symcon extends IPSModuleStrict
         if ($this->ReadPropertyBoolean('AutoSubscribe')) {
             $this->SubscribeMqtt();
         }
+    }
+
+    private function mqttConnackErrorText(int $returnCode): string
+    {
+        return match ($returnCode) {
+            1 => 'Protokollversion wird nicht akzeptiert',
+            2 => 'Client-ID wird nicht akzeptiert',
+            3 => 'Server nicht verfuegbar',
+            4 => 'Benutzername oder Passwort fehlerhaft',
+            5 => 'Nicht autorisiert, Access Code pruefen',
+            default => 'Unbekannter Fehler'
+        };
     }
 
     private function handlePublish(int $flags, string $body): void
