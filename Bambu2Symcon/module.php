@@ -117,6 +117,16 @@ class Bambu2Symcon extends IPSModuleStrict
         $this->MaintainStatusVariables();
         $this->syncStatusVariables($state);
         $this->UpdateVisualizationValue(json_encode($this->buildPayload(), JSON_UNESCAPED_UNICODE));
+        $this->SendDebug(
+            'Payload',
+            sprintf(
+                'Verarbeitet: %s, %d%%, %s',
+                $state['statusLabel'],
+                (int) $state['progress'],
+                $state['printName'] !== '' ? $state['printName'] : 'Kein Druckauftrag'
+            ),
+            0
+        );
 
         return true;
     }
@@ -134,7 +144,10 @@ class Bambu2Symcon extends IPSModuleStrict
             return '';
         }
 
-        $this->SendDebug('RX HEX', $this->formatDebugHex($buffer), 0);
+        if (strlen($buffer) <= 64) {
+            $this->SendDebug('RX HEX', $this->formatDebugHex($buffer), 0);
+        }
+
         $this->handleMqttBytes($buffer);
         return '';
     }
