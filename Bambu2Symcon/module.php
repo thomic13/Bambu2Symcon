@@ -792,6 +792,58 @@ class Bambu2Symcon extends IPSModuleStrict
                 $this->SetValue($ident, $value);
             }
         }
+
+        $this->syncAmsFilamentVariables($state, $advancedEnabled);
+    }
+
+    private function syncAmsFilamentVariables(array $state, bool $enabled): void
+    {
+        $filaments = is_array($state['amsFilaments'] ?? null) ? $state['amsFilaments'] : [];
+        if (!$enabled && $filaments === []) {
+            $this->disableKnownAmsFilamentVariables();
+            return;
+        }
+
+        $basePosition = count(self::STATUS_VARIABLES) + count(self::ADVANCED_VARIABLES) + 1;
+
+        foreach ($filaments as $index => $filament) {
+            if (!is_array($filament)) {
+                continue;
+            }
+
+            $slot = $this->sanitizeIdentPart((string)($filament['slot'] ?? (string)($index + 1)));
+            $position = $basePosition + ($index * 3);
+
+            $materialIdent = 'AmsFilament' . $slot . 'Material';
+            $colorIdent = 'AmsFilament' . $slot . 'Color';
+            $remainingIdent = 'AmsFilament' . $slot . 'Remaining';
+
+            $this->MaintainVariable($materialIdent, 'AMS Slot ' . ($filament['slot'] ?? $index + 1) . ' Material', 3, '', $position, $enabled);
+            $this->MaintainVariable($colorIdent, 'AMS Slot ' . ($filament['slot'] ?? $index + 1) . ' Farbe', 3, '', $position + 1, $enabled);
+            $this->MaintainVariable($remainingIdent, 'AMS Slot ' . ($filament['slot'] ?? $index + 1) . ' Rest', 1, '~Intensity.100', $position + 2, $enabled);
+
+            if (!$enabled) {
+                continue;
+            }
+
+            $this->SetValue($materialIdent, (string)($filament['name'] ?? 'Unbekannt'));
+            $this->SetValue($colorIdent, (string)($filament['color'] ?? ''));
+            $this->SetValue($remainingIdent, (int)round((float)($filament['remaining'] ?? 0)));
+        }
+    }
+
+    private function disableKnownAmsFilamentVariables(): void
+    {
+        $children = IPS_GetChildrenIDs($this->InstanceID);
+        foreach ($children as $childID) {
+            $object = IPS_GetObject($childID);
+            $ident = (string)($object['ObjectIdent'] ?? '');
+            if (preg_match('/^AmsFilament.+(Material|Color|Remaining)$/', $ident) !== 1) {
+                continue;
+            }
+
+            @IPS_DeleteVariable($childID);
+        }
     }
 
     private function getState(): array
@@ -966,6 +1018,16 @@ class Bambu2Symcon extends IPSModuleStrict
         }
 
         return '';
+    }
+
+    private function sanitizeIdentPart(string $value): string
+    {
+        $ident = preg_replace('/[^A-Za-z0-9_]/', '_', $value);
+        if ($ident === null || $ident === '') {
+            return 'Unknown';
+        }
+
+        return $ident;
     }
 
     private function normalizeColor(string $value): string
