@@ -150,7 +150,7 @@
     },
     {
       "type": "Label",
-      "caption": "Die Instanz wird direkt mit einer Client-Socket-IO-Instanz verbunden und spricht MQTT selbst. Als Fallback koennen Rohpayloads weiterhin per BAMBU_ProcessPayload($instanceID, $payload) uebergeben werden."
+      "caption": "Die Instanz wird direkt mit einer Client-Socket-IO-Instanz verbunden und spricht MQTT selbst."
     }
   ]
 }

@@ -33,9 +33,9 @@ class Bambu2Symcon extends IPSModuleStrict
     {
         parent::Create();
 
-        $this->RegisterPropertyString('PrinterSerial', '0938BC612702364');
+        $this->RegisterPropertyString('PrinterSerial', '');
         $this->RegisterPropertyString('MqttTopic', 'device/{SERIAL}/report');
-        $this->RegisterPropertyString('ClientID', 'Bambu2Symcon');
+        $this->RegisterPropertyString('ClientID', '');
         $this->RegisterPropertyString('UserName', 'bblp');
         $this->RegisterPropertyString('Password', '');
         $this->RegisterPropertyInteger('MqttProtocolLevel', 4);
@@ -46,7 +46,7 @@ class Bambu2Symcon extends IPSModuleStrict
         $this->RegisterPropertyBoolean('CreateStatusVariables', true);
         $this->RegisterPropertyBoolean('CreateAdvancedVariables', false);
         $this->RegisterPropertyBoolean('ShowAdvancedMetrics', true);
-        $this->RegisterPropertyString('TileTitle', 'Bambu H2S');
+        $this->RegisterPropertyString('TileTitle', 'Bambu Drucker');
         $this->RegisterPropertyString('AccentColor', 'symcon');
         $this->RegisterPropertyString('ProgressRingSize', 'medium');
         $this->RegisterPropertyBoolean('ShowAmsFilaments', true);
@@ -92,7 +92,7 @@ class Bambu2Symcon extends IPSModuleStrict
         );
     }
 
-    public function ProcessPayload(string $Payload): bool
+    private function processPayload(string $Payload): bool
     {
         $chunk = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $Payload);
         if ($chunk === null || $chunk === '') {
@@ -501,7 +501,7 @@ class Bambu2Symcon extends IPSModuleStrict
         $this->SendDebug('MQTT Topic', $topic, 0);
 
         if ($this->topicMatches($topic)) {
-            $this->ProcessPayload($payload);
+            $this->processPayload($payload);
         }
     }
 
