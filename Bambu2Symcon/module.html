@@ -8,6 +8,8 @@
       --bambu-border: #c9dfe8;
       --bambu-accent: #1976d2;
       --bambu-accent-soft: rgba(25, 118, 210, 0.14);
+      --bambu-ring-size: 132px;
+      --bambu-ring-inner: 94px;
       --bambu-ok: #24cf79;
       --bambu-warning: #e4b72f;
       --bambu-error: #e94d5c;
@@ -20,6 +22,7 @@
       color: var(--bambu-text);
       background: linear-gradient(180deg, #edf6fb 0%, #f5fbfd 100%);
       font-family: inherit;
+      container-type: inline-size;
     }
 
     .bambu-tile[data-accent="green"] {
@@ -27,9 +30,24 @@
       --bambu-accent-soft: rgba(31, 157, 99, 0.16);
     }
 
+    .bambu-tile[data-accent="lightblue"] {
+      --bambu-accent: #48a9e6;
+      --bambu-accent-soft: rgba(72, 169, 230, 0.18);
+    }
+
     .bambu-tile[data-accent="orange"] {
       --bambu-accent: #d77916;
       --bambu-accent-soft: rgba(215, 121, 22, 0.16);
+    }
+
+    .bambu-tile[data-ring-size="small"] {
+      --bambu-ring-size: 112px;
+      --bambu-ring-inner: 78px;
+    }
+
+    .bambu-tile[data-ring-size="large"] {
+      --bambu-ring-size: 154px;
+      --bambu-ring-inner: 110px;
     }
 
     .bambu-tile * {
@@ -96,14 +114,14 @@
 
     .bambu-main {
       display: grid;
-      grid-template-columns: 132px minmax(0, 1fr);
+      grid-template-columns: var(--bambu-ring-size) minmax(0, 1fr);
       gap: 12px;
       align-items: center;
       margin-bottom: 10px;
     }
 
     .bambu-ring {
-      width: 132px;
+      width: var(--bambu-ring-size);
       aspect-ratio: 1;
       border-radius: 50%;
       display: grid;
@@ -117,7 +135,7 @@
     .bambu-ring-inner {
       display: grid;
       place-items: center;
-      width: 94px;
+      width: var(--bambu-ring-inner);
       aspect-ratio: 1;
       border-radius: 50%;
       background: #fff;
@@ -153,6 +171,31 @@
       background: rgba(255, 255, 255, 0.94);
       box-shadow: 0 1px 2px rgba(16, 36, 49, 0.08);
       overflow: hidden;
+    }
+
+    .bambu-metric-head {
+      display: grid;
+      grid-template-columns: 18px minmax(0, 1fr);
+      gap: 6px;
+      align-items: center;
+    }
+
+    .bambu-icon {
+      width: 18px;
+      height: 18px;
+      color: var(--bambu-accent);
+      opacity: 0.9;
+    }
+
+    .bambu-icon svg {
+      width: 18px;
+      height: 18px;
+      display: block;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
     }
 
     .bambu-metric-label {
@@ -211,6 +254,94 @@
       white-space: nowrap;
     }
 
+    .bambu-details {
+      display: none;
+      margin-top: 10px;
+      gap: 8px;
+    }
+
+    .bambu-detail-title {
+      color: var(--bambu-muted);
+      font-size: 11px;
+      line-height: 1;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .bambu-filaments {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+      gap: 7px;
+    }
+
+    .bambu-filament {
+      min-width: 0;
+      padding: 8px;
+      border: 1px solid var(--bambu-border);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.78);
+    }
+
+    .bambu-filament-head {
+      display: grid;
+      grid-template-columns: 16px minmax(0, 1fr) auto;
+      gap: 6px;
+      align-items: center;
+      min-width: 0;
+    }
+
+    .bambu-swatch {
+      width: 16px;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      border: 1px solid rgba(16, 36, 49, 0.16);
+      background: var(--filament-color);
+    }
+
+    .bambu-filament-name {
+      min-width: 0;
+      font-size: 12px;
+      font-weight: 800;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .bambu-filament-slot {
+      color: var(--bambu-muted);
+      font-size: 10px;
+      font-weight: 800;
+    }
+
+    .bambu-filament-bar {
+      height: 5px;
+      margin-top: 7px;
+      border-radius: 999px;
+      background: #d8e8ef;
+      overflow: hidden;
+    }
+
+    .bambu-filament-fill {
+      width: var(--remaining);
+      height: 100%;
+      border-radius: inherit;
+      background: var(--bambu-accent);
+    }
+
+    .bambu-filament-remaining {
+      margin-top: 5px;
+      color: var(--bambu-muted);
+      font-size: 10px;
+      line-height: 1;
+      font-weight: 700;
+    }
+
+    @container (min-width: 520px) {
+      .bambu-details[data-visible="true"] {
+        display: grid;
+      }
+    }
+
     @container (max-width: 330px) {
       .bambu-main {
         grid-template-columns: 112px minmax(0, 1fr);
@@ -251,6 +382,7 @@
   </div>
 
   <div class="bambu-secondary" data-bind="secondary"></div>
+  <div class="bambu-details" data-bind="details"></div>
   <div class="bambu-updated" data-bind="updated"></div>
 </div>
 
@@ -280,15 +412,60 @@
       return `Aktualisiert ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
     };
 
+    const icons = {
+      temperature: '<svg viewBox="0 0 24 24"><path d="M14 14.76V5a4 4 0 0 0-8 0v9.76a6 6 0 1 0 8 0Z"/><path d="M10 9v7"/></svg>',
+      bed: '<svg viewBox="0 0 24 24"><path d="M4 12h16"/><path d="M6 12v6"/><path d="M18 12v6"/><path d="M7 7h10a3 3 0 0 1 3 3v2H4v-2a3 3 0 0 1 3-3Z"/></svg>',
+      time: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+      layer: '<svg viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5"/><path d="m3 16 9 5 9-5"/></svg>',
+      chamber: '<svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="16" rx="2"/><path d="M9 8h6"/><path d="M9 12h6"/></svg>',
+      wifi: '<svg viewBox="0 0 24 24"><path d="M5 13a10 10 0 0 1 14 0"/><path d="M8.5 16.5a5 5 0 0 1 7 0"/><path d="M12 20h.01"/></svg>',
+      ams: '<svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="2"/><circle cx="9" cy="12" r="2"/><circle cx="15" cy="12" r="2"/></svg>',
+      humidity: '<svg viewBox="0 0 24 24"><path d="M12 3s6 6.2 6 11a6 6 0 0 1-12 0c0-4.8 6-11 6-11Z"/></svg>',
+      error: '<svg viewBox="0 0 24 24"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 4.3 2.8 17a2 2 0 0 0 1.7 3h15a2 2 0 0 0 1.7-3L13.7 4.3a2 2 0 0 0-3.4 0Z"/></svg>'
+    };
+
     const metricHtml = (metric) => {
       const target = metric.target ? `<div class="bambu-metric-target">Soll ${escapeHtml(metric.target)}</div>` : '';
+      const icon = icons[metric.kind] || icons.ams;
       return `
         <div class="bambu-metric" data-kind="${escapeHtml(metric.kind)}">
-          <div class="bambu-metric-label">${escapeHtml(metric.label)}</div>
+          <div class="bambu-metric-head">
+            <div class="bambu-icon">${icon}</div>
+            <div class="bambu-metric-label">${escapeHtml(metric.label)}</div>
+          </div>
           <div class="bambu-metric-value">${escapeHtml(metric.value || '--')}</div>
           ${target}
         </div>
       `;
+    };
+
+    const detailsHtml = () => {
+      const filaments = payload.details?.amsFilaments || [];
+      if (!payload.showAmsFilaments || filaments.length === 0) {
+        return '';
+      }
+
+      const items = filaments.map((filament) => {
+        const remaining = Number(filament.remaining);
+        const hasRemaining = payload.showAmsRemaining && Number.isFinite(remaining);
+        const percent = hasRemaining ? Math.max(0, Math.min(100, remaining)) : 0;
+        const bar = hasRemaining
+          ? `<div class="bambu-filament-bar"><div class="bambu-filament-fill" style="--remaining:${percent}%"></div></div><div class="bambu-filament-remaining">${Math.round(percent)}% Rest</div>`
+          : '';
+
+        return `
+          <div class="bambu-filament">
+            <div class="bambu-filament-head">
+              <div class="bambu-swatch" style="--filament-color:${escapeHtml(filament.color || '#d8e1e8')}"></div>
+              <div class="bambu-filament-name">${escapeHtml(filament.name || 'Unbekannt')}</div>
+              <div class="bambu-filament-slot">${escapeHtml(filament.slot || '')}</div>
+            </div>
+            ${bar}
+          </div>
+        `;
+      }).join('');
+
+      return `<div class="bambu-detail-title">AMS Filamente</div><div class="bambu-filaments">${items}</div>`;
     };
 
     const render = () => {
@@ -296,6 +473,7 @@
       const progress = Math.max(0, Math.min(100, Number(printer.progress || 0)));
 
       root.dataset.accent = payload.accent || 'symcon';
+      root.dataset.ringSize = payload.ringSize || 'medium';
       root.style.setProperty('--progress', progress);
       root.querySelector('[data-bind="title"]').textContent = payload.title || 'Bambu';
       root.querySelector('[data-bind="printName"]').textContent = printer.printName || 'Kein Druckauftrag';
@@ -306,6 +484,9 @@
       root.querySelector('[data-bind="secondary"]').innerHTML = payload.showAdvancedMetrics
         ? (payload.metrics?.secondary || []).map(metricHtml).join('')
         : '';
+      const details = root.querySelector('[data-bind="details"]');
+      details.innerHTML = detailsHtml();
+      details.dataset.visible = details.innerHTML !== '' ? 'true' : 'false';
       root.querySelector('[data-bind="updated"]').textContent = formatUpdated(printer.updatedAt);
     };
 

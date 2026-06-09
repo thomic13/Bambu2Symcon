@@ -23,7 +23,6 @@ class Bambu2Symcon extends IPSModuleStrict
         ['ident' => 'PrintErrorCode', 'name' => 'Druck Fehlercode', 'type' => 1, 'profile' => ''],
         ['ident' => 'PrintErrorText', 'name' => 'Druck Fehlertext', 'type' => 3, 'profile' => ''],
         ['ident' => 'AmsTemperature', 'name' => 'AMS Temperatur', 'type' => 2, 'profile' => '~Temperature'],
-        ['ident' => 'AmsHumidityLevel', 'name' => 'AMS Feuchtestufe', 'type' => 1, 'profile' => ''],
         ['ident' => 'AmsHumidity', 'name' => 'AMS Feuchte', 'type' => 1, 'profile' => '~Humidity']
     ];
 
@@ -45,6 +44,9 @@ class Bambu2Symcon extends IPSModuleStrict
         $this->RegisterPropertyBoolean('ShowAdvancedMetrics', true);
         $this->RegisterPropertyString('TileTitle', 'Bambu H2S');
         $this->RegisterPropertyString('AccentColor', 'symcon');
+        $this->RegisterPropertyString('ProgressRingSize', 'medium');
+        $this->RegisterPropertyBoolean('ShowAmsFilaments', true);
+        $this->RegisterPropertyBoolean('ShowAmsRemaining', true);
         $this->RegisterAttributeString('LastState', json_encode($this->emptyState(), JSON_UNESCAPED_UNICODE));
         $this->RegisterAttributeString('LastPayload', '');
         $this->RegisterAttributeString('PayloadBuffer', '');
@@ -269,6 +271,8 @@ class Bambu2Symcon extends IPSModuleStrict
                 $enabled
             );
         }
+
+        $this->MaintainVariable('AmsHumidityLevel', 'AMS Feuchtestufe', 1, '', 0, false);
     }
 
     private function buildPayload(): array
@@ -278,9 +282,13 @@ class Bambu2Symcon extends IPSModuleStrict
         return [
             'title' => $this->ReadPropertyString('TileTitle'),
             'accent' => $this->ReadPropertyString('AccentColor'),
+            'ringSize' => $this->ReadPropertyString('ProgressRingSize'),
             'showAdvancedMetrics' => $this->ReadPropertyBoolean('ShowAdvancedMetrics'),
+            'showAmsFilaments' => $this->ReadPropertyBoolean('ShowAmsFilaments'),
+            'showAmsRemaining' => $this->ReadPropertyBoolean('ShowAmsRemaining'),
             'printer' => $state,
-            'metrics' => $this->buildMetrics($state)
+            'metrics' => $this->buildMetrics($state),
+            'details' => $this->buildDetails($state)
         ];
     }
 
@@ -649,7 +657,6 @@ class Bambu2Symcon extends IPSModuleStrict
                 $this->metric('WLAN', $state['wifiSignal'], '', 'wifi'),
                 $this->metric('AMS Temp', $this->formatTemperature($state['amsTemperature']), '', 'ams'),
                 $this->metric('AMS Feuchte', $this->formatPercent($state['amsHumidity']), '', 'humidity'),
-                $this->metric('AMS Stufe', $this->formatNumeric($state['amsHumidityLevel']), '', 'humidityLevel'),
                 $this->metric('Fehler', $state['errorText'], '', 'error')
             ]
         ];
@@ -662,6 +669,13 @@ class Bambu2Symcon extends IPSModuleStrict
             'value' => $value,
             'target' => $target,
             'kind' => $kind
+        ];
+    }
+
+    private function buildDetails(array $state): array
+    {
+        return [
+            'amsFilaments' => $state['amsFilaments']
         ];
     }
 
@@ -695,12 +709,10 @@ class Bambu2Symcon extends IPSModuleStrict
             'amsTemperature' => $this->firstNumeric([
                 $print['ams']['ams'][0]['temp'] ?? null
             ]),
-            'amsHumidityLevel' => $this->firstNumeric([
-                $print['ams']['ams'][0]['humidity'] ?? null
-            ]),
             'amsHumidity' => $this->firstNumeric([
                 $print['ams']['ams'][0]['humidity_raw'] ?? null
-            ])
+            ]),
+            'amsFilaments' => $this->parseAmsFilaments($print)
         ];
     }
 
@@ -727,7 +739,6 @@ class Bambu2Symcon extends IPSModuleStrict
             'PrintErrorCode' => $state['errorCode'],
             'PrintErrorText' => $state['errorText'],
             'AmsTemperature' => $state['amsTemperature'],
-            'AmsHumidityLevel' => (int) $state['amsHumidityLevel'],
             'AmsHumidity' => (int) $state['amsHumidity']
         ];
 
@@ -766,9 +777,79 @@ class Bambu2Symcon extends IPSModuleStrict
             'errorCode' => 0,
             'errorText' => 'Kein Fehler',
             'amsTemperature' => 0.0,
-            'amsHumidityLevel' => 0.0,
-            'amsHumidity' => 0.0
+            'amsHumidity' => 0.0,
+            'amsFilaments' => []
         ];
+    }
+
+    private function parseAmsFilaments(array $print): array
+    {
+        $units = $print['ams']['ams'] ?? [];
+        if (!is_array($units)) {
+            return [];
+        }
+
+        $filaments = [];
+        foreach ($units as $unitIndex => $unit) {
+            if (!is_array($unit)) {
+                continue;
+            }
+
+            $trays = $unit['tray'] ?? $unit['trays'] ?? [];
+            if (!is_array($trays)) {
+                continue;
+            }
+
+            foreach ($trays as $trayIndex => $tray) {
+                if (!is_array($tray)) {
+                    continue;
+                }
+
+                $name = $this->firstString([
+                    $tray['tray_type'] ?? null,
+                    $tray['filament_type'] ?? null,
+                    $tray['tray_sub_brands'] ?? null,
+                    $tray['name'] ?? null
+                ]);
+
+                $color = $this->normalizeColor($this->firstString([
+                    $tray['tray_color'] ?? null,
+                    $tray['color'] ?? null
+                ]));
+
+                $remaining = $this->firstNumericOrNull([
+                    $tray['remain'] ?? null,
+                    $tray['remaining'] ?? null,
+                    $tray['tray_remaining'] ?? null,
+                    $tray['tray_percent'] ?? null,
+                    $tray['remaining_percent'] ?? null,
+                    $tray['percent'] ?? null
+                ]);
+
+                if ($name === '' && $remaining === null && $color === '') {
+                    continue;
+                }
+
+                $slot = $this->firstString([
+                    $tray['id'] ?? null,
+                    $tray['tray_id'] ?? null,
+                    $tray['slot'] ?? null
+                ]);
+
+                if ($slot === '') {
+                    $slot = ((int) $unitIndex + 1) . '.' . ((int) $trayIndex + 1);
+                }
+
+                $filaments[] = [
+                    'slot' => $slot,
+                    'name' => $name !== '' ? $name : 'Unbekannt',
+                    'color' => $color !== '' ? $color : '#d8e1e8',
+                    'remaining' => $remaining
+                ];
+            }
+        }
+
+        return $filaments;
     }
 
     private function extractJson(string $payload): string
@@ -819,6 +900,46 @@ class Bambu2Symcon extends IPSModuleStrict
         }
 
         return 0.0;
+    }
+
+    private function firstNumericOrNull(array $values): ?float
+    {
+        foreach ($values as $value) {
+            if (is_numeric($value)) {
+                return (float) $value;
+            }
+        }
+
+        return null;
+    }
+
+    private function firstString(array $values): string
+    {
+        foreach ($values as $value) {
+            if (is_scalar($value) && trim((string) $value) !== '') {
+                return trim((string) $value);
+            }
+        }
+
+        return '';
+    }
+
+    private function normalizeColor(string $value): string
+    {
+        $color = trim($value);
+        if ($color === '') {
+            return '';
+        }
+
+        if (preg_match('/^[0-9a-fA-F]{6}$/', $color) === 1) {
+            return '#' . $color;
+        }
+
+        if (preg_match('/^#[0-9a-fA-F]{6}$/', $color) === 1) {
+            return $color;
+        }
+
+        return '';
     }
 
     private function statusLabel(string $status): string

@@ -76,6 +76,16 @@
           "type": "CheckBox",
           "name": "ShowAdvancedMetrics",
           "caption": "Zusatzwerte in grosser Kachel anzeigen"
+        },
+        {
+          "type": "CheckBox",
+          "name": "ShowAmsFilaments",
+          "caption": "AMS Filamente in grosser Kachel anzeigen"
+        },
+        {
+          "type": "CheckBox",
+          "name": "ShowAmsRemaining",
+          "caption": "AMS Restmengen anzeigen"
         }
       ]
     },
@@ -94,8 +104,19 @@
           "caption": "Akzentfarbe",
           "options": [
             { "caption": "IP-Symcon Blau", "value": "symcon" },
+            { "caption": "Hellblau", "value": "lightblue" },
             { "caption": "Gruen", "value": "green" },
             { "caption": "Orange", "value": "orange" }
+          ]
+        },
+        {
+          "type": "Select",
+          "name": "ProgressRingSize",
+          "caption": "Fortschrittskreis",
+          "options": [
+            { "caption": "Kompakt", "value": "small" },
+            { "caption": "Standard", "value": "medium" },
+            { "caption": "Gross", "value": "large" }
           ]
         }
       ]
