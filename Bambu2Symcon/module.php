@@ -926,7 +926,7 @@ class Bambu2Symcon extends IPSModuleStrict
 
     private function normalizeColor(string $value): string
     {
-        $color = trim($value);
+        $color = ltrim(trim($value), '#');
         if ($color === '') {
             return '';
         }
@@ -935,8 +935,8 @@ class Bambu2Symcon extends IPSModuleStrict
             return '#' . $color;
         }
 
-        if (preg_match('/^#[0-9a-fA-F]{6}$/', $color) === 1) {
-            return $color;
+        if (preg_match('/^[0-9a-fA-F]{8}$/', $color) === 1) {
+            return '#' . substr($color, 0, 6);
         }
 
         return '';
