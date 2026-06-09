@@ -2,6 +2,55 @@
   "elements": [
     {
       "type": "ExpansionPanel",
+      "caption": "MQTT Verbindung",
+      "items": [
+        {
+          "type": "ValidationTextBox",
+          "name": "PrinterSerial",
+          "caption": "Drucker Seriennummer"
+        },
+        {
+          "type": "ValidationTextBox",
+          "name": "MqttTopic",
+          "caption": "MQTT Topic"
+        },
+        {
+          "type": "ValidationTextBox",
+          "name": "ClientID",
+          "caption": "Client ID"
+        },
+        {
+          "type": "ValidationTextBox",
+          "name": "UserName",
+          "caption": "Benutzername"
+        },
+        {
+          "type": "PasswordTextBox",
+          "name": "Password",
+          "caption": "Passwort / Access Code"
+        },
+        {
+          "type": "NumberSpinner",
+          "name": "KeepAliveInterval",
+          "caption": "KeepAlive Intervall",
+          "suffix": "Sekunden",
+          "minimum": 15,
+          "maximum": 300
+        },
+        {
+          "type": "CheckBox",
+          "name": "AutoConnect",
+          "caption": "Beim Anwenden automatisch verbinden"
+        },
+        {
+          "type": "CheckBox",
+          "name": "AutoSubscribe",
+          "caption": "Nach Verbindung automatisch abonnieren"
+        }
+      ]
+    },
+    {
+      "type": "ExpansionPanel",
       "caption": "Daten",
       "items": [
         {
@@ -13,16 +62,6 @@
           "type": "CheckBox",
           "name": "ShowAdvancedMetrics",
           "caption": "Zusatzwerte in grosser Kachel anzeigen"
-        },
-        {
-          "type": "ValidationTextBox",
-          "name": "MqttTopic",
-          "caption": "MQTT Topic"
-        },
-        {
-          "type": "CheckBox",
-          "name": "AutoSubscribe",
-          "caption": "Topic beim Anwenden automatisch abonnieren"
         }
       ]
     },
@@ -50,8 +89,18 @@
   ],
   "actions": [
     {
+      "type": "Button",
+      "caption": "MQTT verbinden",
+      "onClick": "BAMBU_ConnectMqtt($id);"
+    },
+    {
+      "type": "Button",
+      "caption": "Topic abonnieren",
+      "onClick": "BAMBU_SubscribeMqtt($id);"
+    },
+    {
       "type": "Label",
-      "caption": "Die Instanz kann direkt mit einem MQTT-Client-Splitter verbunden werden. Alternativ koennen Rohpayloads weiterhin per BAMBU_ProcessPayload($instanceID, $payload) uebergeben werden."
+      "caption": "Die Instanz wird direkt mit einer Client-Socket-IO-Instanz verbunden und spricht MQTT selbst. Als Fallback koennen Rohpayloads weiterhin per BAMBU_ProcessPayload($instanceID, $payload) uebergeben werden."
     }
   ]
 }

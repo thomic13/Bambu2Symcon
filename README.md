@@ -8,7 +8,8 @@ Das Modul ist als eigenstaendiger Parser mit Visualisierung gedacht. Optional ko
 
 - Parser fuer Bambu MQTT-Statuspayloads mit `print`-Block.
 - Interner MQTT-Fragmentbuffer fuer RegisterVariable-Datenstroeme.
-- Direkte Datenfluss-Anbindung an kompatible MQTT-Client-Splitter.
+- Direkte Datenfluss-Anbindung an eine Client-Socket-IO-Instanz.
+- Eigener MQTT-Client im Modul fuer `CONNECT`, `SUBSCRIBE`, `PUBLISH` und `PINGREQ`.
 - Interner Cache des letzten gueltigen Zustands.
 - Moderne HTML-Kachel mit rundem Fortschrittsring.
 - Anzeige von Druckstatus, Druckname, Fortschritt, Restzeit, Layern, Nozzle-, Bett- und Bauraumtemperatur.
@@ -35,20 +36,34 @@ Das Modul ist als eigenstaendiger Parser mit Visualisierung gedacht. Optional ko
 
 4. Eine neue Instanz `Bambu2Symcon` anlegen.
 5. Die Instanz in der Kachelvisualisierung platzieren.
-6. Die Instanz mit dem MQTT-Client-Splitter verbinden oder MQTT-Payloads per Skript an die Instanz uebergeben.
+6. Die Instanz mit einer Client-Socket-IO-Instanz verbinden oder MQTT-Payloads per Skript an die Instanz uebergeben.
 
-## Direkte MQTT-Anbindung
+## Direkte MQTT-Anbindung ueber Client Socket
 
-Wenn ein kompatibler MQTT-Client-Splitter vorhanden ist, kann `Bambu2Symcon` direkt darunter betrieben werden. In der Instanzkonfiguration:
+`Bambu2Symcon` kann direkt unter einer Client-Socket-IO-Instanz betrieben werden. Der Client Socket enthaelt nur Host/IP, Port und optional SSL. Das Modul uebernimmt den MQTT-Teil selbst.
+
+Client Socket:
 
 ```text
-MQTT Topic: device/+/report
-Topic beim Anwenden automatisch abonnieren: aktiv
+Host: IP-Adresse des Druckers
+Port: 8883 oder der am Drucker genutzte MQTT-Port
+SSL: je nach Drucker-/Symcon-Konfiguration
 ```
 
-Danach die Instanz ueber den Parent/Gateway-Dialog mit dem MQTT-Client verbinden, z. B. mit der bestehenden Instanz `MQTT Client Bambulab`.
+Bambu2Symcon:
 
-Das Modul verarbeitet eingehende MQTT-Daten dann direkt ueber den IP-Symcon-Datenfluss. RegisterVariable und Zielskript werden in dieser Variante nicht mehr benoetigt.
+```text
+Seriennummer: 0938BC612702364
+MQTT Topic: device/0938BC612702364/report
+Client ID: Bambu2Symcon
+Benutzername: bblp
+Passwort / Access Code: Zugriffscode des Druckers
+KeepAlive: 60 Sekunden
+Beim Anwenden automatisch verbinden: aktiv
+Nach Verbindung automatisch abonnieren: aktiv
+```
+
+Das Modul verarbeitet eingehende MQTT-PUBLISH-Pakete direkt ueber den IP-Symcon-Datenfluss. RegisterVariable und Zielskript werden in dieser Variante nicht mehr benoetigt.
 
 ## MQTT-Payload uebergeben
 

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 class Bambu2Symcon extends IPSModuleStrict
 {
-    private const MQTT_PARENT_TX = '{97475B04-67C3-A74D-C970-E9409B0EFA1D}';
+    private const CLIENT_SOCKET_TX = '{79827379-F36E-4ADA-8A95-5F8D1DC92FA9}';
 
     private const STATUS_VARIABLES = [
         ['ident' => 'PrinterStatus', 'name' => 'Status', 'type' => 3, 'profile' => ''],
@@ -31,15 +31,24 @@ class Bambu2Symcon extends IPSModuleStrict
     {
         parent::Create();
 
+        $this->RegisterPropertyString('PrinterSerial', '0938BC612702364');
+        $this->RegisterPropertyString('MqttTopic', 'device/0938BC612702364/report');
+        $this->RegisterPropertyString('ClientID', 'Bambu2Symcon');
+        $this->RegisterPropertyString('UserName', 'bblp');
+        $this->RegisterPropertyString('Password', '');
+        $this->RegisterPropertyInteger('KeepAliveInterval', 60);
+        $this->RegisterPropertyBoolean('AutoConnect', true);
+        $this->RegisterPropertyBoolean('AutoSubscribe', true);
         $this->RegisterPropertyBoolean('CreateStatusVariables', true);
         $this->RegisterPropertyBoolean('ShowAdvancedMetrics', true);
-        $this->RegisterPropertyString('MqttTopic', 'device/+/report');
-        $this->RegisterPropertyBoolean('AutoSubscribe', true);
         $this->RegisterPropertyString('TileTitle', 'Bambu H2S');
         $this->RegisterPropertyString('AccentColor', 'symcon');
         $this->RegisterAttributeString('LastState', json_encode($this->emptyState(), JSON_UNESCAPED_UNICODE));
         $this->RegisterAttributeString('LastPayload', '');
         $this->RegisterAttributeString('PayloadBuffer', '');
+        $this->RegisterAttributeString('NetworkBuffer', '');
+        $this->RegisterAttributeInteger('PacketIdentifier', 1);
+        $this->RegisterTimer('KeepAliveTimer', 0, 'BAMBU_MqttPing($_IPS["TARGET"]);');
     }
 
     public function ApplyChanges(): void
@@ -49,7 +58,11 @@ class Bambu2Symcon extends IPSModuleStrict
         $this->SetVisualizationType(1);
         $this->MaintainStatusVariables();
         $this->syncStatusVariables($this->getState());
-        $this->subscribeMqttTopic();
+        $this->SetTimerInterval('KeepAliveTimer', max(15, $this->ReadPropertyInteger('KeepAliveInterval')) * 500);
+
+        if ($this->ReadPropertyBoolean('AutoConnect')) {
+            $this->ConnectMqtt();
+        }
     }
 
     public function GetVisualizationTile(): string
@@ -114,29 +127,62 @@ class Bambu2Symcon extends IPSModuleStrict
             return '';
         }
 
-        $buffer = (string)($data['Buffer'] ?? '');
+        $buffer = $this->decodeIpsBuffer((string)($data['Buffer'] ?? ''));
         if ($buffer === '') {
             return '';
         }
 
-        $message = json_decode($buffer, true);
-        if (is_array($message)) {
-            $topic = (string)($message['TOPIC'] ?? $message['Topic'] ?? $message['topic'] ?? '');
-            $payload = (string)($message['MSG'] ?? $message['Payload'] ?? $message['payload'] ?? $message['Message'] ?? '');
+        $this->handleMqttBytes($buffer);
+        return '';
+    }
 
-            if (!$this->topicMatches($topic)) {
-                return '';
-            }
-
-            if ($payload !== '') {
-                $this->ProcessPayload($payload);
-            }
-
-            return '';
+    public function ConnectMqtt(): bool
+    {
+        if (!$this->hasParent()) {
+            $this->SendDebug('MQTT', 'Kein Client Socket verbunden', 0);
+            return false;
         }
 
-        $this->ProcessPayload($buffer);
-        return '';
+        $clientID = trim($this->ReadPropertyString('ClientID'));
+        if ($clientID === '') {
+            $clientID = 'Bambu2Symcon-' . $this->InstanceID;
+        }
+
+        $packet = $this->buildConnectPacket(
+            $clientID,
+            $this->ReadPropertyString('UserName'),
+            $this->ReadPropertyString('Password'),
+            max(15, $this->ReadPropertyInteger('KeepAliveInterval'))
+        );
+
+        $this->sendToSocket($packet);
+        $this->SendDebug('MQTT', 'CONNECT gesendet', 0);
+        return true;
+    }
+
+    public function SubscribeMqtt(): bool
+    {
+        if (!$this->hasParent()) {
+            $this->SendDebug('MQTT', 'Kein Client Socket verbunden', 0);
+            return false;
+        }
+
+        $topic = trim($this->ReadPropertyString('MqttTopic'));
+        if ($topic === '') {
+            $this->SendDebug('MQTT', 'Kein Topic konfiguriert', 0);
+            return false;
+        }
+
+        $this->sendToSocket($this->buildSubscribePacket($topic));
+        $this->SendDebug('MQTT', 'SUBSCRIBE gesendet: ' . $topic, 0);
+        return true;
+    }
+
+    public function MqttPing(): void
+    {
+        if ($this->hasParent()) {
+            $this->sendToSocket(chr(0xC0) . chr(0x00));
+        }
     }
 
     public function MaintainStatusVariables(): void
@@ -167,40 +213,200 @@ class Bambu2Symcon extends IPSModuleStrict
         ];
     }
 
-    private function subscribeMqttTopic(): void
+    private function hasParent(): bool
     {
-        if (!$this->ReadPropertyBoolean('AutoSubscribe')) {
-            return;
-        }
-
-        $topic = trim($this->ReadPropertyString('MqttTopic'));
-        if ($topic === '') {
-            return;
-        }
-
         $instance = IPS_GetInstance($this->InstanceID);
-        if (($instance['ConnectionID'] ?? 0) === 0) {
-            $this->SendDebug('Subscribe', 'Kein MQTT-Gateway verbunden, Auto-Subscribe uebersprungen', 0);
+        return ($instance['ConnectionID'] ?? 0) > 0;
+    }
+
+    private function sendToSocket(string $buffer): void
+    {
+        $this->SendDataToParent(json_encode([
+            'DataID' => self::CLIENT_SOCKET_TX,
+            'Buffer' => $this->encodeIpsBuffer($buffer)
+        ], JSON_UNESCAPED_UNICODE));
+    }
+
+    private function handleMqttBytes(string $bytes): void
+    {
+        $buffer = $this->ReadAttributeString('NetworkBuffer') . $bytes;
+
+        while ($buffer !== '') {
+            $packet = $this->extractMqttPacket($buffer);
+            if ($packet === null) {
+                break;
+            }
+
+            $this->handleMqttPacket($packet);
+        }
+
+        $this->WriteAttributeString('NetworkBuffer', $buffer);
+    }
+
+    private function extractMqttPacket(string &$buffer): ?string
+    {
+        $length = strlen($buffer);
+        if ($length < 2) {
+            return null;
+        }
+
+        $multiplier = 1;
+        $remainingLength = 0;
+        $index = 1;
+
+        do {
+            if ($index >= $length) {
+                return null;
+            }
+
+            $encodedByte = ord($buffer[$index]);
+            $remainingLength += ($encodedByte & 127) * $multiplier;
+            $multiplier *= 128;
+            $index++;
+        } while (($encodedByte & 128) !== 0 && $index <= 4);
+
+        $totalLength = $index + $remainingLength;
+        if ($length < $totalLength) {
+            return null;
+        }
+
+        $packet = substr($buffer, 0, $totalLength);
+        $buffer = substr($buffer, $totalLength);
+        return $packet;
+    }
+
+    private function handleMqttPacket(string $packet): void
+    {
+        $firstByte = ord($packet[0]);
+        $packetType = $firstByte >> 4;
+        $flags = $firstByte & 0x0F;
+        $offset = $this->fixedHeaderLength($packet);
+        $body = substr($packet, $offset);
+
+        match ($packetType) {
+            2 => $this->handleConnack($body),
+            3 => $this->handlePublish($flags, $body),
+            9 => $this->SendDebug('MQTT', 'SUBACK empfangen', 0),
+            13 => $this->SendDebug('MQTT', 'PINGRESP empfangen', 0),
+            default => $this->SendDebug('MQTT', 'Pakettyp empfangen: ' . $packetType, 0)
+        };
+    }
+
+    private function handleConnack(string $body): void
+    {
+        if (strlen($body) < 2) {
+            $this->SendDebug('MQTT', 'CONNACK unvollstaendig', 0);
             return;
         }
 
-        $command = json_encode([
-            'Function' => 'Subscribe',
-            'Topic' => $topic
-        ], JSON_UNESCAPED_UNICODE);
-
-        if ($command === false) {
+        $returnCode = ord($body[1]);
+        if ($returnCode !== 0) {
+            $this->SendDebug('MQTT', 'CONNACK Fehlercode: ' . $returnCode, 0);
             return;
         }
 
-        try {
-            $this->SendDataToParent(json_encode([
-                'DataID' => self::MQTT_PARENT_TX,
-                'Buffer' => $command
-            ], JSON_UNESCAPED_UNICODE));
-        } catch (Throwable $exception) {
-            $this->SendDebug('Subscribe', $exception->getMessage(), 0);
+        $this->SendDebug('MQTT', 'CONNACK OK', 0);
+        if ($this->ReadPropertyBoolean('AutoSubscribe')) {
+            $this->SubscribeMqtt();
         }
+    }
+
+    private function handlePublish(int $flags, string $body): void
+    {
+        if (strlen($body) < 2) {
+            return;
+        }
+
+        $topicLength = unpack('n', substr($body, 0, 2))[1];
+        if (strlen($body) < 2 + $topicLength) {
+            return;
+        }
+
+        $topic = substr($body, 2, $topicLength);
+        $payloadOffset = 2 + $topicLength;
+        $qos = ($flags & 0x06) >> 1;
+
+        if ($qos > 0) {
+            $payloadOffset += 2;
+        }
+
+        $payload = substr($body, $payloadOffset);
+        $this->SendDebug('MQTT Topic', $topic, 0);
+
+        if ($this->topicMatches($topic)) {
+            $this->ProcessPayload($payload);
+        }
+    }
+
+    private function fixedHeaderLength(string $packet): int
+    {
+        $index = 1;
+        do {
+            $encodedByte = ord($packet[$index]);
+            $index++;
+        } while (($encodedByte & 128) !== 0 && $index < 5);
+
+        return $index;
+    }
+
+    private function buildConnectPacket(string $clientID, string $username, string $password, int $keepAlive): string
+    {
+        $flags = 0x02;
+        if ($username !== '') {
+            $flags |= 0x80;
+        }
+
+        if ($password !== '') {
+            $flags |= 0x40;
+        }
+
+        $variableHeader = $this->mqttString('MQTT') . chr(4) . chr($flags) . pack('n', $keepAlive);
+        $payload = $this->mqttString($clientID);
+
+        if ($username !== '') {
+            $payload .= $this->mqttString($username);
+        }
+
+        if ($password !== '') {
+            $payload .= $this->mqttString($password);
+        }
+
+        return chr(0x10) . $this->encodeRemainingLength(strlen($variableHeader . $payload)) . $variableHeader . $payload;
+    }
+
+    private function buildSubscribePacket(string $topic): string
+    {
+        $packetID = $this->nextPacketIdentifier();
+        $payload = pack('n', $packetID) . $this->mqttString($topic) . chr(0);
+        return chr(0x82) . $this->encodeRemainingLength(strlen($payload)) . $payload;
+    }
+
+    private function nextPacketIdentifier(): int
+    {
+        $identifier = $this->ReadAttributeInteger('PacketIdentifier');
+        $next = $identifier >= 65535 ? 1 : $identifier + 1;
+        $this->WriteAttributeInteger('PacketIdentifier', $next);
+        return $identifier;
+    }
+
+    private function mqttString(string $value): string
+    {
+        return pack('n', strlen($value)) . $value;
+    }
+
+    private function encodeRemainingLength(int $length): string
+    {
+        $encoded = '';
+        do {
+            $digit = $length % 128;
+            $length = intdiv($length, 128);
+            if ($length > 0) {
+                $digit |= 128;
+            }
+            $encoded .= chr($digit);
+        } while ($length > 0);
+
+        return $encoded;
     }
 
     private function topicMatches(string $topic): bool
@@ -213,6 +419,45 @@ class Bambu2Symcon extends IPSModuleStrict
         $pattern = preg_quote($filter, '/');
         $pattern = str_replace(['\+', '\#'], ['[^/]+', '.*'], $pattern);
         return preg_match('/^' . $pattern . '$/', $topic) === 1;
+    }
+
+    private function encodeIpsBuffer(string $buffer): string
+    {
+        $encoded = '';
+        $length = strlen($buffer);
+
+        for ($index = 0; $index < $length; $index++) {
+            $byte = ord($buffer[$index]);
+            if ($byte < 128) {
+                $encoded .= chr($byte);
+            } else {
+                $encoded .= chr(0xC0 | ($byte >> 6)) . chr(0x80 | ($byte & 0x3F));
+            }
+        }
+
+        return $encoded;
+    }
+
+    private function decodeIpsBuffer(string $buffer): string
+    {
+        $decoded = '';
+        $length = strlen($buffer);
+
+        for ($index = 0; $index < $length; $index++) {
+            $byte = ord($buffer[$index]);
+            if ($byte < 128) {
+                $decoded .= chr($byte);
+                continue;
+            }
+
+            if ($index + 1 < $length) {
+                $next = ord($buffer[$index + 1]);
+                $decoded .= chr((($byte & 0x1F) << 6) | ($next & 0x3F));
+                $index++;
+            }
+        }
+
+        return $decoded;
     }
 
     private function buildMetrics(array $state): array

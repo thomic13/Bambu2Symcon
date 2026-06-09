@@ -9,11 +9,11 @@
   ],
   "url": "https://github.com/thomic13/Bambu2Symcon",
   "parentRequirements": [
-    "{97475B04-67C3-A74D-C970-E9409B0EFA1D}"
+    "{79827379-F36E-4ADA-8A95-5F8D1DC92FA9}"
   ],
   "childRequirements": [],
   "implemented": [
-    "{DBDA9DF7-5D04-F49D-370A-2B9153D00D9B}"
+    "{018EF6B5-AB94-40C6-AA53-46943E824ACF}"
   ],
   "prefix": "BAMBU"
 }
