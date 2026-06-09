@@ -134,6 +134,7 @@ class Bambu2Symcon extends IPSModuleStrict
             return '';
         }
 
+        $this->SendDebug('RX HEX', bin2hex($buffer), 0);
         $this->handleMqttBytes($buffer);
         return '';
     }
