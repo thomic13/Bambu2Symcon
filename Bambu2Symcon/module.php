@@ -134,7 +134,7 @@ class Bambu2Symcon extends IPSModuleStrict
             return '';
         }
 
-        $this->SendDebug('RX HEX', bin2hex($buffer), 0);
+        $this->SendDebug('RX HEX', $this->formatDebugHex($buffer), 0);
         $this->handleMqttBytes($buffer);
         return '';
     }
@@ -258,7 +258,7 @@ class Bambu2Symcon extends IPSModuleStrict
 
     private function handleMqttBytes(string $bytes): void
     {
-        $buffer = $this->ReadAttributeString('NetworkBuffer') . $bytes;
+        $buffer = $this->readNetworkBuffer() . $bytes;
 
         while ($buffer !== '') {
             $packet = $this->extractMqttPacket($buffer);
@@ -269,7 +269,29 @@ class Bambu2Symcon extends IPSModuleStrict
             $this->handleMqttPacket($packet);
         }
 
-        $this->WriteAttributeString('NetworkBuffer', $buffer);
+        if (strlen($buffer) > 1000000) {
+            $this->SendDebug('MQTT', 'Netzwerkbuffer verworfen, zu gross', 0);
+            $buffer = '';
+        }
+
+        $this->WriteAttributeString('NetworkBuffer', bin2hex($buffer));
+    }
+
+    private function readNetworkBuffer(): string
+    {
+        $buffer = $this->ReadAttributeString('NetworkBuffer');
+        if ($buffer === '') {
+            return '';
+        }
+
+        if ((strlen($buffer) % 2) === 0 && ctype_xdigit($buffer)) {
+            $decoded = hex2bin($buffer);
+            if ($decoded !== false) {
+                return $decoded;
+            }
+        }
+
+        return $buffer;
     }
 
     private function extractMqttPacket(string &$buffer): ?string
@@ -511,6 +533,16 @@ class Bambu2Symcon extends IPSModuleStrict
         }
 
         return $buffer;
+    }
+
+    private function formatDebugHex(string $buffer): string
+    {
+        $hex = bin2hex($buffer);
+        if (strlen($hex) > 512) {
+            $hex = substr($hex, 0, 512) . '...';
+        }
+
+        return $hex . ' (' . strlen($buffer) . ' Bytes)';
     }
 
     private function buildMetrics(array $state): array
