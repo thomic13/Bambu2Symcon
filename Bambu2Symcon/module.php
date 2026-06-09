@@ -129,7 +129,7 @@ class Bambu2Symcon extends IPSModuleStrict
             return '';
         }
 
-        $buffer = $this->decodeIpsBuffer((string)($data['Buffer'] ?? ''));
+        $buffer = $this->normalizeSocketBuffer($this->decodeIpsBuffer((string)($data['Buffer'] ?? '')));
         if ($buffer === '') {
             return '';
         }
@@ -494,6 +494,23 @@ class Bambu2Symcon extends IPSModuleStrict
         }
 
         return $decoded;
+    }
+
+    private function normalizeSocketBuffer(string $buffer): string
+    {
+        $trimmed = preg_replace('/\s+/', '', $buffer);
+        if ($trimmed === null || $trimmed === '') {
+            return $buffer;
+        }
+
+        if ((strlen($trimmed) % 2) === 0 && ctype_xdigit($trimmed)) {
+            $decoded = hex2bin($trimmed);
+            if ($decoded !== false) {
+                return $decoded;
+            }
+        }
+
+        return $buffer;
     }
 
     private function buildMetrics(array $state): array
