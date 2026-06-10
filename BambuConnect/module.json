@@ -1,11 +1,9 @@
 {
   "id": "{FD8BCB42-D6F5-491F-A778-AE6D75F65E6E}",
-  "name": "Bambu2Symcon",
+  "name": "BambuConnect",
   "type": 3,
   "vendor": "Bambu Lab",
-  "aliases": [
-    "Bambu Connect"
-  ],
+  "aliases": [],
   "url": "https://github.com/thomic13/Bambu2Symcon",
   "parentRequirements": [
     "{79827379-F36E-4ADA-8A95-5F8D1DC92FA9}"

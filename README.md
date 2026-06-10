@@ -46,9 +46,9 @@ Voraussichtlich funktioniert das Modul auch mit weiteren Bambu Lab Druckern, die
    https://github.com/thomic13/Bambu2Symcon
    ```
 
-4. Eine neue Instanz `Bambu Connect` anlegen.
+4. Eine neue Instanz `BambuConnect` anlegen.
 5. Eine eigene Client-Socket-IO-Instanz fuer den Drucker anlegen oder verbinden.
-6. Die `Bambu Connect`-Instanz in der Kachelvisualisierung platzieren.
+6. Die `BambuConnect`-Instanz in der Kachelvisualisierung platzieren.
 
 ## Drucker vorbereiten
 
@@ -86,7 +86,7 @@ Wichtig: Diese Client-Socket-Instanz darf nicht gleichzeitig als Parent eines se
 
 ## Modul konfigurieren
 
-In der `Bambu Connect`-Instanz:
+In der `BambuConnect`-Instanz:
 
 ```text
 Drucker Seriennummer: 01ABC2345678901
@@ -110,7 +110,7 @@ Die MQTT-Protokollversion befindet sich unter `Entwickler-Tools`. Standard ist `
 ## Verbindung testen
 
 1. Client Socket speichern und aktivieren.
-2. In der `Bambu Connect`-Instanz `MQTT verbinden` ausfuehren.
+2. In der `BambuConnect`-Instanz `MQTT verbinden` ausfuehren.
 3. Im Debug der Instanz auf `CONNACK OK` achten.
 4. Danach sollte automatisch `SUBSCRIBE gesendet` und `SUBACK empfangen` erscheinen.
 5. Sobald MQTT-Daten eintreffen, aktualisieren sich Kachel und Variablen.
@@ -197,7 +197,7 @@ Repository-Struktur:
 ```text
 library.json
 README.md
-Bambu2Symcon/
+BambuConnect/
   form.json
   module.html
   module.json
