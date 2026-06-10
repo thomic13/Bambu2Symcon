@@ -63,11 +63,6 @@ class BambuConnect extends IPSModuleStrict
         $this->SetTimerInterval('ConnectionWatchdogTimer', 0);
     }
 
-    public function GetCompatibleParents(): string
-    {
-        return self::MQTT_CLIENT_MODULE_ID;
-    }
-
     public function GetVisualizationTile(): string
     {
         $html = file_get_contents(__DIR__ . '/module.html');
@@ -93,7 +88,7 @@ class BambuConnect extends IPSModuleStrict
         $json = $this->extractJson($buffer);
         if ($json === '') {
             $this->WriteAttributeString('PayloadBuffer', '');
-            $this->SendDebug('Payload', 'Kein JSON-Anfang gefunden', 0);
+            $this->SendDebug('Payload', 'Kein JSON-Anfang gefunden: ' . $this->formatPayloadPreview($chunk), 0);
             return false;
         }
 
@@ -254,6 +249,20 @@ class BambuConnect extends IPSModuleStrict
         }
 
         return $topic;
+    }
+
+    private function formatPayloadPreview(string $payload): string
+    {
+        $text = trim(preg_replace('/\s+/', ' ', $payload) ?? '');
+        if ($text !== '') {
+            if (strlen($text) > 120) {
+                $text = substr($text, 0, 120) . '...';
+            }
+
+            return $text;
+        }
+
+        return 'HEX ' . strtoupper(substr(bin2hex($payload), 0, 120));
     }
 
     private function buildMetrics(array $state): array
