@@ -43,7 +43,7 @@ Voraussichtlich funktioniert das Modul auch mit weiteren Bambu Lab Druckern, die
 3. Dieses Repository hinzufuegen:
 
    ```text
-   https://github.com/thomic13/Bambu2Symcon
+   https://github.com/thomic13/BambuConnect
    ```
 
 4. Eine neue Instanz `BambuConnect` anlegen.
