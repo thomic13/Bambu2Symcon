@@ -195,10 +195,7 @@ class BambuConnect extends IPSModuleStrict
             return false;
         }
 
-        if (!$this->isParentSocketOpen()) {
-            $this->SendDebug('Socket', 'Client Socket ist nicht verbunden. Bitte Client-Socket-IO aktivieren und speichern.', 0);
-            return false;
-        }
+        $this->ensureParentSocketOpen();
 
         $clientID = trim($this->ReadPropertyString('ClientID'));
         if ($clientID === '') {
@@ -326,11 +323,6 @@ class BambuConnect extends IPSModuleStrict
             return false;
         }
 
-        if (!$this->isParentSocketOpen()) {
-            $this->SendDebug('Socket', 'Client Socket ist nicht verbunden, Senden uebersprungen', 0);
-            return false;
-        }
-
         try {
             @CSCK_SendText($connectionID, $buffer);
         } catch (Throwable $exception) {
@@ -341,16 +333,29 @@ class BambuConnect extends IPSModuleStrict
         return true;
     }
 
-    private function isParentSocketOpen(): bool
+    private function ensureParentSocketOpen(): void
     {
         $instance = IPS_GetInstance($this->InstanceID);
         $connectionID = (int)($instance['ConnectionID'] ?? 0);
         if ($connectionID <= 0) {
-            return false;
+            return;
         }
 
         $connection = IPS_GetInstance($connectionID);
-        return (int)($connection['InstanceStatus'] ?? 0) === 102;
+        if ((int)($connection['InstanceStatus'] ?? 0) === 102) {
+            return;
+        }
+
+        try {
+            @IPS_SetProperty($connectionID, 'Open', false);
+            @IPS_ApplyChanges($connectionID);
+            IPS_Sleep(250);
+            @IPS_SetProperty($connectionID, 'Open', true);
+            @IPS_ApplyChanges($connectionID);
+            $this->SendDebug('Socket', 'Client Socket wurde neu geoeffnet', 0);
+        } catch (Throwable $exception) {
+            $this->SendDebug('Socket', 'Client Socket konnte nicht neu geoeffnet werden: ' . $exception->getMessage(), 0);
+        }
     }
 
     private function handleMqttBytes(string $bytes): void
