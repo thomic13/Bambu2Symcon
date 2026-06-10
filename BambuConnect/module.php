@@ -63,9 +63,9 @@ class BambuConnect extends IPSModuleStrict
         $this->SetTimerInterval('ConnectionWatchdogTimer', 0);
     }
 
-    public function GetCompatibleParents(): array
+    public function GetCompatibleParents(): string
     {
-        return [self::MQTT_CLIENT_MODULE_ID];
+        return json_encode([self::MQTT_CLIENT_MODULE_ID]);
     }
 
     public function GetVisualizationTile(): string
