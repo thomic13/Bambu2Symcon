@@ -344,6 +344,8 @@ class BambuConnect extends IPSModuleStrict
                     $payload['Buffer'] = $this->encodeIpsBuffer($buffer);
                 } elseif ($transport === 'dataflow_utf8_escaped' || $transport === 'dataflow_parent_utf8') {
                     $payload['Buffer'] = $this->encodeIpsBuffer($buffer);
+                } elseif ($transport === 'dataflow_native_utf8' || $transport === 'dataflow_native_escaped') {
+                    $payload['Buffer'] = utf8_encode($buffer);
                 } elseif ($transport === 'dataflow_data') {
                     unset($payload['Buffer']);
                     $payload['Data'] = $buffer;
@@ -353,7 +355,7 @@ class BambuConnect extends IPSModuleStrict
 
                 $field = isset($payload['Buffer']) ? 'Buffer' : 'Data';
                 $this->SendDebug('Socket', 'Sende per SendDataToParent: ' . $transport . ', Feld ' . $field, 0);
-                $json = json_encode($payload, $transport === 'dataflow_utf8_escaped' || $transport === 'dataflow_parent_utf8' ? 0 : JSON_UNESCAPED_UNICODE);
+                $json = json_encode($payload, in_array($transport, ['dataflow_utf8_escaped', 'dataflow_parent_utf8', 'dataflow_native_escaped'], true) ? 0 : JSON_UNESCAPED_UNICODE);
                 if ($json === false) {
                     throw new Exception('JSON encode error: ' . json_last_error_msg());
                 }

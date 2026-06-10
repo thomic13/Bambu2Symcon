@@ -144,6 +144,8 @@
             { "caption": "Datenfluss Buffer UTF-8", "value": "dataflow_utf8" },
             { "caption": "Datenfluss Buffer UTF-8 escaped", "value": "dataflow_utf8_escaped" },
             { "caption": "Datenfluss Parent UTF-8", "value": "dataflow_parent_utf8" },
+            { "caption": "Datenfluss native utf8_encode", "value": "dataflow_native_utf8" },
+            { "caption": "Datenfluss native escaped", "value": "dataflow_native_escaped" },
             { "caption": "Datenfluss Data raw", "value": "dataflow_data" },
             { "caption": "Datenfluss Buffer Base64", "value": "dataflow_base64" }
           ]
