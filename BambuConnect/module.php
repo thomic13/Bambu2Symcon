@@ -332,7 +332,10 @@ class BambuConnect extends IPSModuleStrict
         }
 
         try {
-            @CSCK_SendText($connectionID, $buffer);
+            $this->SendDataToParent(json_encode([
+                'DataID' => self::CLIENT_SOCKET_TX,
+                'Buffer' => $this->encodeIpsBuffer($buffer)
+            ]));
         } catch (Throwable $exception) {
             $this->SendDebug('Socket', $exception->getMessage(), 0);
             return false;
