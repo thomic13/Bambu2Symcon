@@ -65,7 +65,7 @@ class BambuConnect extends IPSModuleStrict
 
     public function GetCompatibleParents(): string
     {
-        return json_encode([self::MQTT_CLIENT_MODULE_ID]);
+        return self::MQTT_CLIENT_MODULE_ID;
     }
 
     public function GetVisualizationTile(): string
