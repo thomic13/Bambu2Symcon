@@ -5,7 +5,6 @@ declare(strict_types=1);
 class BambuConnect extends IPSModuleStrict
 {
     private const CLIENT_SOCKET_TX = '{79827379-F36E-4ADA-8A95-5F8D1DC92FA9}';
-    private const CLIENT_SOCKET_RX = '{018EF6B5-AB94-40C6-AA53-46943E824ACF}';
 
     private const STATUS_VARIABLES = [
         ['ident' => 'PrinterStatus', 'name' => 'Status', 'type' => 3, 'profile' => ''],
@@ -335,13 +334,24 @@ class BambuConnect extends IPSModuleStrict
 
         try {
             $transport = $this->ReadPropertyString('SocketTransport');
-            if ($transport === 'dataflow' || $transport === 'dataflow_rx') {
-                $dataID = $transport === 'dataflow_rx' ? self::CLIENT_SOCKET_RX : self::CLIENT_SOCKET_TX;
-                $this->SendDebug('Socket', 'Sende per SendDataToParent mit DataID ' . $dataID, 0);
-                $this->SendDataToParent(json_encode([
-                    'DataID' => $dataID,
-                    'Buffer' => $this->encodeIpsBuffer($buffer)
-                ], JSON_UNESCAPED_UNICODE));
+            if (strpos($transport, 'dataflow') === 0) {
+                $payload = [
+                    'DataID' => self::CLIENT_SOCKET_TX,
+                    'Buffer' => $buffer
+                ];
+
+                if ($transport === 'dataflow_utf8') {
+                    $payload['Buffer'] = $this->encodeIpsBuffer($buffer);
+                } elseif ($transport === 'dataflow_data') {
+                    unset($payload['Buffer']);
+                    $payload['Data'] = $buffer;
+                } elseif ($transport === 'dataflow_base64') {
+                    $payload['Buffer'] = base64_encode($buffer);
+                }
+
+                $field = isset($payload['Buffer']) ? 'Buffer' : 'Data';
+                $this->SendDebug('Socket', 'Sende per SendDataToParent: ' . $transport . ', Feld ' . $field, 0);
+                $this->SendDataToParent(json_encode($payload, JSON_UNESCAPED_UNICODE));
             } else {
                 $this->SendDebug('Socket', 'Sende per CSCK_SendText', 0);
                 @CSCK_SendText($connectionID, $buffer);

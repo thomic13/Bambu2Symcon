@@ -140,8 +140,10 @@
           "caption": "Socket Versand",
           "options": [
             { "caption": "Legacy direkt", "value": "legacy" },
-            { "caption": "Datenfluss TX-ID", "value": "dataflow" },
-            { "caption": "Datenfluss RX-ID Test", "value": "dataflow_rx" }
+            { "caption": "Datenfluss Buffer raw", "value": "dataflow_raw" },
+            { "caption": "Datenfluss Buffer UTF-8", "value": "dataflow_utf8" },
+            { "caption": "Datenfluss Data raw", "value": "dataflow_data" },
+            { "caption": "Datenfluss Buffer Base64", "value": "dataflow_base64" }
           ]
         }
       ]
