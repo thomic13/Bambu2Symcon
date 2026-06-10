@@ -39,6 +39,7 @@ class BambuConnect extends IPSModuleStrict
         $this->RegisterPropertyString('UserName', 'bblp');
         $this->RegisterPropertyString('Password', '');
         $this->RegisterPropertyInteger('MqttProtocolLevel', 4);
+        $this->RegisterPropertyString('SocketTransport', 'legacy');
         $this->RegisterPropertyInteger('KeepAliveInterval', 60);
         $this->RegisterPropertyBoolean('AutoConnect', false);
         $this->RegisterPropertyBoolean('AutoSubscribe', true);
@@ -332,10 +333,16 @@ class BambuConnect extends IPSModuleStrict
         }
 
         try {
-            $this->SendDataToParent(json_encode([
-                'DataID' => self::CLIENT_SOCKET_TX,
-                'Buffer' => $this->encodeIpsBuffer($buffer)
-            ], JSON_UNESCAPED_UNICODE));
+            if ($this->ReadPropertyString('SocketTransport') === 'dataflow') {
+                $this->SendDebug('Socket', 'Sende per SendDataToParent', 0);
+                $this->SendDataToParent(json_encode([
+                    'DataID' => self::CLIENT_SOCKET_TX,
+                    'Buffer' => $this->encodeIpsBuffer($buffer)
+                ], JSON_UNESCAPED_UNICODE));
+            } else {
+                $this->SendDebug('Socket', 'Sende per CSCK_SendText', 0);
+                @CSCK_SendText($connectionID, $buffer);
+            }
         } catch (Throwable $exception) {
             $this->SendDebug('Socket', $exception->getMessage(), 0);
             return false;
