@@ -60,7 +60,7 @@ class BambuConnect extends IPSModuleStrict
         $this->ConnectParent(self::MQTT_CLIENT_MODULE_ID);
 
         $this->SetVisualizationType(1);
-        $this->SetReceiveDataFilter($this->buildReceiveDataFilter());
+        $this->SetReceiveDataFilter('');
         $this->MaintainStatusVariables();
         $this->syncStatusVariables($this->getState());
         $this->SetTimerInterval('KeepAliveTimer', 0);
@@ -237,18 +237,6 @@ class BambuConnect extends IPSModuleStrict
         $pattern = preg_quote($filter, '/');
         $pattern = str_replace(['\+', '\#'], ['[^/]+', '.*'], $pattern);
         return preg_match('/^' . $pattern . '$/', $topic) === 1;
-    }
-
-    private function buildReceiveDataFilter(): string
-    {
-        $topic = $this->resolveMqttTopic();
-        if ($topic === '') {
-            return '';
-        }
-
-        $pattern = preg_quote($topic, '/');
-        $pattern = str_replace(['\+', '\#'], ['[^/]+', '.*'], $pattern);
-        return '.*"Topic":"' . $pattern . '".*';
     }
 
     private function resolveMqttTopic(): string
