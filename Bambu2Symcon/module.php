@@ -199,7 +199,7 @@ class Bambu2Symcon extends IPSModuleStrict
 
         $clientID = trim($this->ReadPropertyString('ClientID'));
         if ($clientID === '') {
-            $clientID = 'Bambu2Symcon-' . $this->InstanceID;
+            $clientID = 'BambuConnect-' . $this->InstanceID;
         }
 
         $username = trim($this->ReadPropertyString('UserName'));
@@ -888,11 +888,6 @@ class Bambu2Symcon extends IPSModuleStrict
                 continue;
             }
 
-            $colorID = @IPS_GetObjectIDByIdent($colorIdent, $this->InstanceID);
-            if ($colorID !== false) {
-                $this->applyColorPresentation($colorID);
-            }
-
             $this->SetValue($materialIdent, (string)($filament['name'] ?? 'Unbekannt'));
             $this->SetValue($colorIdent, $this->colorToSymconRgbValue((string)($filament['color'] ?? '')));
             $this->SetValue($remainingIdent, (int)round((float)($filament['remaining'] ?? 0)));
@@ -1106,36 +1101,6 @@ class Bambu2Symcon extends IPSModuleStrict
         }
 
         return $ident;
-    }
-
-    private function applyColorPresentation(int $variableID): void
-    {
-        if (!function_exists('IPS_SetVariableCustomPresentation')) {
-            return;
-        }
-
-        $presentationCandidates = [
-            ['Color', ['Encoding' => 'RGB']],
-            ['Color', ['encoding' => 'RGB']],
-            ['Farbe', ['Kodierung' => 'RGB']],
-            ['Farbe', ['Encoding' => 'RGB']]
-        ];
-
-        foreach ($presentationCandidates as $candidate) {
-            [$presentation, $parameters] = $candidate;
-
-            try {
-                @IPS_SetVariableCustomPresentation($variableID, $presentation, $parameters);
-                return;
-            } catch (Throwable $exception) {
-            }
-
-            try {
-                @IPS_SetVariableCustomPresentation($variableID, $presentation, json_encode($parameters));
-                return;
-            } catch (Throwable $exception) {
-            }
-        }
     }
 
     private function normalizeColor(string $value): string

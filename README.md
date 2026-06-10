@@ -1,6 +1,6 @@
-# Bambu2Symcon
+# Bambu Connect
 
-`Bambu2Symcon` ist ein IP-Symcon-Modul fuer Bambu Lab 3D-Drucker. Es verbindet sich direkt per MQTT mit dem Drucker, verarbeitet die Statusdaten und stellt eine moderne Kachel fuer die neue IP-Symcon Visualisierung bereit.
+`Bambu Connect` ist ein IP-Symcon-Modul fuer Bambu Lab 3D-Drucker. Es verbindet sich direkt per MQTT mit dem Drucker, verarbeitet die Statusdaten und stellt eine moderne Kachel fuer die neue IP-Symcon Visualisierung bereit.
 
 Das Modul ist als eigenstaendige Druckerinstanz gedacht. Die MQTT-Verbindung wird direkt in der Instanz konfiguriert.
 
@@ -46,9 +46,9 @@ Voraussichtlich funktioniert das Modul auch mit weiteren Bambu Lab Druckern, die
    https://github.com/thomic13/Bambu2Symcon
    ```
 
-4. Eine neue Instanz `Bambu Drucker` anlegen.
+4. Eine neue Instanz `Bambu Connect` anlegen.
 5. Eine eigene Client-Socket-IO-Instanz fuer den Drucker anlegen oder verbinden.
-6. Die `Bambu Drucker`-Instanz in der Kachelvisualisierung platzieren.
+6. Die `Bambu Connect`-Instanz in der Kachelvisualisierung platzieren.
 
 ## Drucker vorbereiten
 
@@ -82,16 +82,16 @@ Ueberpruefe Host: nein
 Zertifikat verwenden: nein
 ```
 
-Wichtig: Diese Client-Socket-Instanz darf nicht gleichzeitig als Parent eines separaten IP-Symcon MQTT-Client-Splitters genutzt werden. Pro TCP-Verbindung darf nur ein MQTT-Client sprechen. Fuer `Bambu2Symcon` daher eine eigene Client-Socket-Instanz verwenden oder den bisherigen MQTT-Client-Splitter fuer diesen Drucker deaktivieren.
+Wichtig: Diese Client-Socket-Instanz darf nicht gleichzeitig als Parent eines separaten IP-Symcon MQTT-Client-Splitters genutzt werden. Pro TCP-Verbindung darf nur ein MQTT-Client sprechen. Fuer `Bambu Connect` daher eine eigene Client-Socket-Instanz verwenden oder den bisherigen MQTT-Client-Splitter fuer diesen Drucker deaktivieren.
 
 ## Modul konfigurieren
 
-In der `Bambu Drucker`-Instanz:
+In der `Bambu Connect`-Instanz:
 
 ```text
 Drucker Seriennummer: 01ABC2345678901
 MQTT Topic: device/{SERIAL}/report
-Client ID: Bambu2Symcon oder leer lassen
+Client ID: BambuConnect oder leer lassen
 Benutzername: bblp
 Passwort / Access Code: Zugriffscode des Druckers
 KeepAlive Intervall: 60 Sekunden
@@ -110,7 +110,7 @@ Die MQTT-Protokollversion befindet sich unter `Entwickler-Tools`. Standard ist `
 ## Verbindung testen
 
 1. Client Socket speichern und aktivieren.
-2. In der `Bambu Drucker`-Instanz `MQTT verbinden` ausfuehren.
+2. In der `Bambu Connect`-Instanz `MQTT verbinden` ausfuehren.
 3. Im Debug der Instanz auf `CONNACK OK` achten.
 4. Danach sollte automatisch `SUBSCRIBE gesendet` und `SUBACK empfangen` erscheinen.
 5. Sobald MQTT-Daten eintreffen, aktualisieren sich Kachel und Variablen.
@@ -150,7 +150,7 @@ Die AMS-Farbvariablen werden als String im IP-Symcon-RGB-Format gespeichert, zum
 {"r":33,"g":150,"b":243}
 ```
 
-Damit koennen sie in IP-Symcon als Farbdarstellung mit RGB-Kodierung verwendet werden.
+Damit koennen sie bei Bedarf manuell in IP-Symcon als Farbdarstellung mit RGB-Kodierung verwendet werden.
 
 ## Kachel
 
