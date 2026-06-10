@@ -5,6 +5,7 @@ declare(strict_types=1);
 class BambuConnect extends IPSModuleStrict
 {
     private const CLIENT_SOCKET_TX = '{79827379-F36E-4ADA-8A95-5F8D1DC92FA9}';
+    private const CLIENT_SOCKET_RX = '{018EF6B5-AB94-40C6-AA53-46943E824ACF}';
 
     private const STATUS_VARIABLES = [
         ['ident' => 'PrinterStatus', 'name' => 'Status', 'type' => 3, 'profile' => ''],
@@ -333,10 +334,12 @@ class BambuConnect extends IPSModuleStrict
         }
 
         try {
-            if ($this->ReadPropertyString('SocketTransport') === 'dataflow') {
-                $this->SendDebug('Socket', 'Sende per SendDataToParent', 0);
+            $transport = $this->ReadPropertyString('SocketTransport');
+            if ($transport === 'dataflow' || $transport === 'dataflow_rx') {
+                $dataID = $transport === 'dataflow_rx' ? self::CLIENT_SOCKET_RX : self::CLIENT_SOCKET_TX;
+                $this->SendDebug('Socket', 'Sende per SendDataToParent mit DataID ' . $dataID, 0);
                 $this->SendDataToParent(json_encode([
-                    'DataID' => self::CLIENT_SOCKET_TX,
+                    'DataID' => $dataID,
                     'Buffer' => $this->encodeIpsBuffer($buffer)
                 ], JSON_UNESCAPED_UNICODE));
             } else {
