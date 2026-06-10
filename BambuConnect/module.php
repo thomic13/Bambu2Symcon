@@ -33,8 +33,6 @@ class BambuConnect extends IPSModuleStrict
     {
         parent::Create();
 
-        $this->ConnectParent(self::MQTT_CLIENT_MODULE_ID);
-
         $this->RegisterPropertyString('PrinterSerial', '');
         $this->RegisterPropertyString('MqttTopic', 'device/{SERIAL}/report');
         $this->RegisterPropertyBoolean('CreateStatusVariables', true);
@@ -57,14 +55,17 @@ class BambuConnect extends IPSModuleStrict
     {
         parent::ApplyChanges();
 
-        $this->ConnectParent(self::MQTT_CLIENT_MODULE_ID);
-
         $this->SetVisualizationType(1);
         $this->SetReceiveDataFilter('');
         $this->MaintainStatusVariables();
         $this->syncStatusVariables($this->getState());
         $this->SetTimerInterval('KeepAliveTimer', 0);
         $this->SetTimerInterval('ConnectionWatchdogTimer', 0);
+    }
+
+    public function GetCompatibleParents(): array
+    {
+        return [self::MQTT_CLIENT_MODULE_ID];
     }
 
     public function GetVisualizationTile(): string
