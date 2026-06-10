@@ -142,6 +142,8 @@
             { "caption": "Legacy direkt", "value": "legacy" },
             { "caption": "Datenfluss Buffer raw", "value": "dataflow_raw" },
             { "caption": "Datenfluss Buffer UTF-8", "value": "dataflow_utf8" },
+            { "caption": "Datenfluss Buffer UTF-8 escaped", "value": "dataflow_utf8_escaped" },
+            { "caption": "Datenfluss Parent UTF-8", "value": "dataflow_parent_utf8" },
             { "caption": "Datenfluss Data raw", "value": "dataflow_data" },
             { "caption": "Datenfluss Buffer Base64", "value": "dataflow_base64" }
           ]

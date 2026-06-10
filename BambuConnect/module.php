@@ -342,6 +342,8 @@ class BambuConnect extends IPSModuleStrict
 
                 if ($transport === 'dataflow_utf8') {
                     $payload['Buffer'] = $this->encodeIpsBuffer($buffer);
+                } elseif ($transport === 'dataflow_utf8_escaped' || $transport === 'dataflow_parent_utf8') {
+                    $payload['Buffer'] = $this->encodeIpsBuffer($buffer);
                 } elseif ($transport === 'dataflow_data') {
                     unset($payload['Buffer']);
                     $payload['Data'] = $buffer;
@@ -351,7 +353,16 @@ class BambuConnect extends IPSModuleStrict
 
                 $field = isset($payload['Buffer']) ? 'Buffer' : 'Data';
                 $this->SendDebug('Socket', 'Sende per SendDataToParent: ' . $transport . ', Feld ' . $field, 0);
-                $this->SendDataToParent(json_encode($payload, JSON_UNESCAPED_UNICODE));
+                $json = json_encode($payload, $transport === 'dataflow_utf8_escaped' || $transport === 'dataflow_parent_utf8' ? 0 : JSON_UNESCAPED_UNICODE);
+                if ($json === false) {
+                    throw new Exception('JSON encode error: ' . json_last_error_msg());
+                }
+
+                if ($transport === 'dataflow_parent_utf8') {
+                    parent::SendDataToParent($json);
+                } else {
+                    $this->SendDataToParent($json);
+                }
             } else {
                 $this->SendDebug('Socket', 'Sende per CSCK_SendText', 0);
                 @CSCK_SendText($connectionID, $buffer);
