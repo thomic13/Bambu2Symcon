@@ -152,6 +152,7 @@ class BambuConnect extends IPSModuleStrict
                 $payload = utf8_decode($payload);
             }
 
+            $payload = $this->normalizeMqttPayload($payload);
             $this->SendDebug('MQTT Topic', $topic, 0);
             $this->processPayload($payload);
             return '';
@@ -263,6 +264,19 @@ class BambuConnect extends IPSModuleStrict
         }
 
         return 'HEX ' . strtoupper(substr(bin2hex($payload), 0, 120));
+    }
+
+    private function normalizeMqttPayload(string $payload): string
+    {
+        $trimmed = trim($payload);
+        if ($trimmed !== '' && (strlen($trimmed) % 2) === 0 && ctype_xdigit($trimmed)) {
+            $decoded = hex2bin($trimmed);
+            if ($decoded !== false) {
+                return $decoded;
+            }
+        }
+
+        return $payload;
     }
 
     private function buildMetrics(array $state): array
