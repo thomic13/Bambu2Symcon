@@ -2,64 +2,6 @@
   "elements": [
     {
       "type": "ExpansionPanel",
-      "caption": "MQTT Verbindung",
-      "items": [
-        {
-          "type": "ValidationTextBox",
-          "name": "PrinterSerial",
-          "caption": "Drucker Seriennummer"
-        },
-        {
-          "type": "ValidationTextBox",
-          "name": "MqttTopic",
-          "caption": "MQTT Topic"
-        },
-        {
-          "type": "Label",
-          "caption": "Standard: device/{SERIAL}/report. {SERIAL} wird durch die Drucker-Seriennummer ersetzt."
-        },
-        {
-          "type": "ValidationTextBox",
-          "name": "ClientID",
-          "caption": "Client ID"
-        },
-        {
-          "type": "ValidationTextBox",
-          "name": "UserName",
-          "caption": "Benutzername"
-        },
-        {
-          "type": "PasswordTextBox",
-          "name": "Password",
-          "caption": "Passwort / Access Code"
-        },
-        {
-          "type": "NumberSpinner",
-          "name": "KeepAliveInterval",
-          "caption": "KeepAlive Intervall",
-          "suffix": "Sekunden",
-          "minimum": 15,
-          "maximum": 300
-        },
-        {
-          "type": "CheckBox",
-          "name": "AutoConnect",
-          "caption": "Beim Anwenden automatisch verbinden"
-        },
-        {
-          "type": "CheckBox",
-          "name": "AutoSubscribe",
-          "caption": "Nach Verbindung automatisch abonnieren"
-        },
-        {
-          "type": "CheckBox",
-          "name": "AutoReconnect",
-          "caption": "Verbindung bei ausbleibenden Daten automatisch neu aufbauen"
-        }
-      ]
-    },
-    {
-      "type": "ExpansionPanel",
       "caption": "Daten",
       "items": [
         {
@@ -103,7 +45,7 @@
           "name": "AccentColor",
           "caption": "Akzentfarbe",
           "options": [
-            { "caption": "IP-Symcon Blau", "value": "symcon" },
+            { "caption": "Standard Blau", "value": "symcon" },
             { "caption": "Hellblau", "value": "lightblue" },
             { "caption": "Gruen", "value": "green" },
             { "caption": "Orange", "value": "orange" }
@@ -120,37 +62,12 @@
           ]
         }
       ]
-    },
-    {
-      "type": "ExpansionPanel",
-      "caption": "Entwickler-Tools",
-      "items": [
-        {
-          "type": "Select",
-          "name": "MqttProtocolLevel",
-          "caption": "MQTT Protokoll",
-          "options": [
-            { "caption": "MQTT 3.1.1", "value": 4 },
-            { "caption": "MQTT 3.1", "value": 3 }
-          ]
-        }
-      ]
     }
   ],
   "actions": [
     {
-      "type": "Button",
-      "caption": "MQTT verbinden",
-      "onClick": "BAMBU_ConnectMqtt($id);"
-    },
-    {
-      "type": "Button",
-      "caption": "Topic abonnieren",
-      "onClick": "BAMBU_SubscribeMqtt($id);"
-    },
-    {
       "type": "Label",
-      "caption": "Die Instanz wird direkt mit einer Client-Socket-IO-Instanz verbunden und spricht MQTT selbst."
+      "caption": "Die Instanz wird mit einer MQTT-Client-Splitter-Instanz verbunden. MQTT-Zugangsdaten und Subscription werden im MQTT Client konfiguriert."
     }
   ]
 }
