@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 class BambuConnect extends IPSModuleStrict
 {
-    private const MQTT_CLIENT_MODULE_ID = '{F7A0DD2E-7684-95C0-64C2-D2A9DC47577B}';
-
     private const STATUS_VARIABLES = [
         ['ident' => 'PrinterStatus', 'name' => 'Status', 'type' => 3, 'profile' => ''],
         ['ident' => 'PrintName', 'name' => 'Druckname', 'type' => 3, 'profile' => ''],
@@ -153,7 +151,6 @@ class BambuConnect extends IPSModuleStrict
             }
 
             $payload = $this->normalizeMqttPayload($payload);
-            $this->SendDebug('MQTT Topic', $topic, 0);
             $this->processPayload($payload);
             return '';
         }

@@ -1,13 +1,12 @@
 # Bambu Connect
 
-`Bambu Connect` ist ein IP-Symcon-Modul fuer Bambu Lab 3D-Drucker. Es verbindet sich direkt per MQTT mit dem Drucker, verarbeitet die Statusdaten und stellt eine moderne Kachel fuer die neue IP-Symcon Visualisierung bereit.
+`Bambu Connect` ist ein IP-Symcon-Modul fuer Bambu Lab 3D-Drucker. Es verarbeitet die lokalen MQTT-Statusdaten des Druckers und stellt eine moderne Kachel fuer die neue IP-Symcon Visualisierung bereit.
 
-Das Modul ist als eigenstaendige Druckerinstanz gedacht. Die MQTT-Verbindung wird direkt in der Instanz konfiguriert.
+Das Modul ist als eigenstaendige Druckerinstanz gedacht. Die MQTT-Verbindung selbst laeuft store-konform ueber die IP-Symcon Instanzen `Client Socket` und `MQTT Client`.
 
 ## Funktionen
 
-- Direkte MQTT-Anbindung ueber eine IP-Symcon Client-Socket-IO-Instanz.
-- Eingebauter MQTT-Client fuer `CONNECT`, `SUBSCRIBE`, `PUBLISH` und `PINGREQ`.
+- Anbindung ueber den IP-Symcon `MQTT Client` Splitter.
 - Standard-Topic mit Seriennummer-Platzhalter: `device/{SERIAL}/report`.
 - Interner Cache des letzten gueltigen Druckerstatus.
 - Moderne Kachel mit rundem Fortschrittsring.
@@ -17,7 +16,6 @@ Das Modul ist als eigenstaendige Druckerinstanz gedacht. Die MQTT-Verbindung wir
 - AMS-Filamentanzeige mit Material, Restmenge und Filamentfarbe.
 - Optionales Anlegen von Statusvariablen unterhalb der Instanz.
 - Optionales Anlegen von AMS-Zusatzvariablen, inklusive Farbwerten im Symcon-RGB-Format.
-- Automatischer Reconnect bei ausbleibenden Daten.
 - Bewusst keine automatische Abbildung des gesamten Bambu-JSON-Baums.
 
 ## Anforderungen
@@ -47,8 +45,10 @@ Voraussichtlich funktioniert das Modul auch mit weiteren Bambu Lab Druckern, die
    ```
 
 4. Eine neue Instanz `BambuConnect` anlegen.
-5. Eine eigene Client-Socket-IO-Instanz fuer den Drucker anlegen oder verbinden.
-6. Die `BambuConnect`-Instanz in der Kachelvisualisierung platzieren.
+5. Einen `Client Socket` fuer den Drucker anlegen.
+6. Einen `MQTT Client` an diesen Client Socket haengen.
+7. Die `BambuConnect`-Instanz mit dem MQTT Client verbinden.
+8. Die `BambuConnect`-Instanz in der Kachelvisualisierung platzieren.
 
 ## Drucker vorbereiten
 
@@ -68,7 +68,7 @@ Der Zugriffscode wird am Drucker bzw. in der Bambu-Konfiguration angezeigt. Clou
 
 ## Client Socket einrichten
 
-Die Client-Socket-IO-Instanz enthaelt nur die TCP-/TLS-Verbindung zum Drucker. Der MQTT-Teil wird vom Modul selbst gesprochen.
+Die Client-Socket-IO-Instanz enthaelt nur die TCP-/TLS-Verbindung zum Drucker.
 
 Empfohlene Client-Socket-Konfiguration:
 
@@ -82,7 +82,22 @@ Ueberpruefe Host: nein
 Zertifikat verwenden: nein
 ```
 
-Wichtig: Diese Client-Socket-Instanz darf nicht gleichzeitig als Parent eines separaten IP-Symcon MQTT-Client-Splitters genutzt werden. Pro TCP-Verbindung darf nur ein MQTT-Client sprechen. Fuer `Bambu Connect` daher eine eigene Client-Socket-Instanz verwenden oder den bisherigen MQTT-Client-Splitter fuer diesen Drucker deaktivieren.
+## MQTT Client einrichten
+
+Der IP-Symcon `MQTT Client` wird mit dem Client Socket verbunden und uebernimmt MQTT-Login, KeepAlive und Subscription.
+
+Empfohlene MQTT-Client-Konfiguration:
+
+```text
+Client ID: eindeutiger Name, z. B. BambuConnect-01ABC2345678901
+Benutzername: bblp
+Passwort: Zugriffscode des Druckers
+KeepAlive Intervall: 60 Sekunden
+Subscription: device/01ABC2345678901/report
+QoS: 0
+```
+
+Die Seriennummer im Subscription-Topic muss zur Seriennummer des Druckers passen.
 
 ## Modul konfigurieren
 
@@ -91,12 +106,6 @@ In der `BambuConnect`-Instanz:
 ```text
 Drucker Seriennummer: 01ABC2345678901
 MQTT Topic: device/{SERIAL}/report
-Client ID: BambuConnect oder leer lassen
-Benutzername: bblp
-Passwort / Access Code: Zugriffscode des Druckers
-KeepAlive Intervall: 60 Sekunden
-Nach Verbindung automatisch abonnieren: aktiv
-Verbindung bei ausbleibenden Daten automatisch neu aufbauen: aktiv
 ```
 
 `{SERIAL}` wird automatisch durch die eingetragene Drucker-Seriennummer ersetzt. Alternativ kann das Topic vollstaendig eingetragen werden, zum Beispiel:
@@ -105,19 +114,19 @@ Verbindung bei ausbleibenden Daten automatisch neu aufbauen: aktiv
 device/01ABC2345678901/report
 ```
 
-Die MQTT-Protokollversion befindet sich unter `Entwickler-Tools`. Standard ist `MQTT 3.1.1`.
+Zugangsdaten, Client ID, KeepAlive und Subscription werden nicht in `Bambu Connect`, sondern in der verbundenen MQTT-Client-Instanz konfiguriert.
 
 ## Verbindung testen
 
 1. Client Socket speichern und aktivieren.
-2. In der `BambuConnect`-Instanz `MQTT verbinden` ausfuehren.
-3. Im Debug der Instanz auf `CONNACK OK` achten.
-4. Danach sollte automatisch `SUBSCRIBE gesendet` und `SUBACK empfangen` erscheinen.
+2. MQTT Client speichern und mit dem Client Socket verbinden.
+3. Im Debug des MQTT Clients auf erfolgreiche Verbindung und empfangene Nachrichten achten.
+4. `Bambu Connect` per `Gateway aendern` mit dem MQTT Client verbinden.
 5. Sobald MQTT-Daten eintreffen, aktualisieren sich Kachel und Variablen.
 
-Wenn `CONNACK Fehlercode 5` erscheint, ist in der Regel der Access Code falsch oder der lokale Zugriff am Drucker nicht aktiv.
+Wenn der MQTT Client keine Daten empfaengt, sind meist Access Code, lokaler Zugriff, Client Socket oder Subscription-Topic zu pruefen.
 
-Wenn keine Daten eintreffen, Seriennummer und Topic pruefen.
+Wenn der MQTT Client Daten empfaengt, aber `Bambu Connect` nicht aktualisiert, Seriennummer und MQTT Topic in der Bambu-Connect-Instanz pruefen.
 
 ## Datenvariablen
 
@@ -188,7 +197,7 @@ Das Modul liest aktuell unter anderem:
 
 ## Hinweise
 
-Der Drucker kann die TCP-Verbindung gelegentlich schliessen. In diesem Fall kann der IP-Symcon Client Socket Meldungen wie `Fehler beim Lesen: End of file` ausgeben. Das Modul baut die Verbindung bei aktivem Auto-Reconnect wieder auf, sobald keine Daten mehr eintreffen.
+Der Drucker kann die TCP-Verbindung gelegentlich schliessen. In diesem Fall kann der IP-Symcon Client Socket Meldungen wie `Fehler beim Lesen: End of file` ausgeben. Die Wiederverbindung liegt bei Client Socket und MQTT Client.
 
 ## Entwicklung
 

@@ -69,7 +69,7 @@
           "name": "AccentColor",
           "caption": "Akzentfarbe",
           "options": [
-            { "caption": "IP-Symcon Blau", "value": "symcon" },
+            { "caption": "Standard Blau", "value": "symcon" },
             { "caption": "Hellblau", "value": "lightblue" },
             { "caption": "Gruen", "value": "green" },
             { "caption": "Orange", "value": "orange" }
