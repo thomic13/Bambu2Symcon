@@ -186,6 +186,14 @@ Das Modul liest aktuell unter anderem:
 | AMS Klima | `print.ams.ams.0.temp`, `print.ams.ams.0.humidity`, `print.ams.ams.0.humidity_raw` |
 | AMS Filamente | `print.ams.ams.*.tray.*` |
 
+## Unterstützung
+
+Dir gefällt `Bambu Connect` und du möchtest die weitere Entwicklung unterstützen?
+
+<a href="https://paypal.me/Thomic13/">
+  <img src="https://www.paypalobjects.com/de_DE/DE/i/btn/btn_donate_LG.gif" alt="Mit PayPal unterstützen">
+</a>
+
 ## Hinweise
 
 Version 2.0 stellt die MQTT-Anbindung auf den IP-Symcon `MQTT Client` Splitter um. Dadurch werden MQTT-Login, KeepAlive und Subscription in den dafuer vorgesehenen IP-Symcon-Instanzen konfiguriert, waehrend `Bambu Connect` nur noch die empfangenen Topic-/Payload-Daten auswertet. Diese Anpassung ist die Basis fuer eine store-konformere Modulstruktur.
