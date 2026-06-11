@@ -2,30 +2,6 @@
   "elements": [
     {
       "type": "ExpansionPanel",
-      "caption": "MQTT Verbindung",
-      "items": [
-        {
-          "type": "ValidationTextBox",
-          "name": "PrinterSerial",
-          "caption": "Drucker Seriennummer"
-        },
-        {
-          "type": "ValidationTextBox",
-          "name": "MqttTopic",
-          "caption": "MQTT Topic"
-        },
-        {
-          "type": "Label",
-          "caption": "Standard: device/{SERIAL}/report. {SERIAL} wird durch die Drucker-Seriennummer ersetzt."
-        },
-        {
-          "type": "Label",
-          "caption": "Die Zugangsdaten, Client-ID, KeepAlive und Subscription werden in der verbundenen MQTT-Client-Instanz konfiguriert."
-        }
-      ]
-    },
-    {
-      "type": "ExpansionPanel",
       "caption": "Daten",
       "items": [
         {
@@ -91,7 +67,7 @@
   "actions": [
     {
       "type": "Label",
-      "caption": "Die Instanz wird mit einer MQTT-Client-Splitter-Instanz verbunden und wertet deren Topic/Payload-Daten aus."
+      "caption": "Die Instanz wird mit einer MQTT-Client-Splitter-Instanz verbunden. MQTT-Zugangsdaten und Subscription werden im MQTT Client konfiguriert."
     }
   ]
 }

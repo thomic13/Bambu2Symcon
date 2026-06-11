@@ -7,8 +7,8 @@ Das Modul ist als eigenstaendige Druckerinstanz gedacht. Die MQTT-Verbindung sel
 ## Funktionen
 
 - Anbindung ueber den IP-Symcon `MQTT Client` Splitter.
-- Standard-Topic mit Seriennummer-Platzhalter: `device/{SERIAL}/report`.
 - Interner Cache des letzten gueltigen Druckerstatus.
+- Offline-Anzeige in der Kachel, wenn ueber den MQTT Client keine gueltigen Statusdaten mehr eintreffen.
 - Moderne Kachel mit rundem Fortschrittsring.
 - Konfigurierbare Akzentfarbe und Groesse des Fortschrittskreises.
 - Anzeige von Druckstatus, Druckname, Fortschritt, Restzeit, Layern, Nozzle-, Bett- und Bauraumtemperatur.
@@ -101,20 +101,9 @@ Die Seriennummer im Subscription-Topic muss zur Seriennummer des Druckers passen
 
 ## Modul konfigurieren
 
-In der `BambuConnect`-Instanz:
+In der `BambuConnect`-Instanz werden nur Daten- und Kacheloptionen konfiguriert. Die Drucker-Seriennummer wird im Subscription-Topic des verbundenen MQTT Clients verwendet, nicht im Modul selbst.
 
-```text
-Drucker Seriennummer: 01ABC2345678901
-MQTT Topic: device/{SERIAL}/report
-```
-
-`{SERIAL}` wird automatisch durch die eingetragene Drucker-Seriennummer ersetzt. Alternativ kann das Topic vollstaendig eingetragen werden, zum Beispiel:
-
-```text
-device/01ABC2345678901/report
-```
-
-Zugangsdaten, Client ID, KeepAlive und Subscription werden nicht in `Bambu Connect`, sondern in der verbundenen MQTT-Client-Instanz konfiguriert.
+Zugangsdaten, Client ID, KeepAlive und Subscription werden in der verbundenen MQTT-Client-Instanz konfiguriert.
 
 ## Verbindung testen
 
@@ -126,7 +115,9 @@ Zugangsdaten, Client ID, KeepAlive und Subscription werden nicht in `Bambu Conne
 
 Wenn der MQTT Client keine Daten empfaengt, sind meist Access Code, lokaler Zugriff, Client Socket oder Subscription-Topic zu pruefen.
 
-Wenn der MQTT Client Daten empfaengt, aber `Bambu Connect` nicht aktualisiert, Seriennummer und MQTT Topic in der Bambu-Connect-Instanz pruefen.
+Wenn der MQTT Client Daten empfaengt, aber `Bambu Connect` nicht aktualisiert, ist meist die Gateway-Verknuepfung zwischen `Bambu Connect` und dem MQTT Client zu pruefen.
+
+Wenn fuer laengere Zeit kein gueltiger Statuspayload in `Bambu Connect` ankommt, zeigt die Kachel oben rechts `Offline`. Sobald wieder gueltige Daten eintreffen, wird der normale Druckerstatus wieder angezeigt.
 
 ## Datenvariablen
 

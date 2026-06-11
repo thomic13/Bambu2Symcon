@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 class BambuConnect extends IPSModuleStrict
 {
+    private const OFFLINE_TIMEOUT_SECONDS = 120;
+
     private const STATUS_VARIABLES = [
         ['ident' => 'PrinterStatus', 'name' => 'Status', 'type' => 3, 'profile' => ''],
         ['ident' => 'PrintName', 'name' => 'Druckname', 'type' => 3, 'profile' => ''],
@@ -45,6 +47,7 @@ class BambuConnect extends IPSModuleStrict
         $this->RegisterAttributeString('LastPayload', '');
         $this->RegisterAttributeString('PayloadBuffer', '');
         $this->RegisterAttributeInteger('LastPayloadTimestamp', 0);
+        $this->RegisterAttributeInteger('LastConnectionOnline', 0);
         $this->RegisterTimer('KeepAliveTimer', 0, 'BAMBU_MqttPing($_IPS["TARGET"]);');
         $this->RegisterTimer('ConnectionWatchdogTimer', 0, 'BAMBU_CheckConnection($_IPS["TARGET"]);');
     }
@@ -56,9 +59,9 @@ class BambuConnect extends IPSModuleStrict
         $this->SetVisualizationType(1);
         $this->SetReceiveDataFilter('');
         $this->MaintainStatusVariables();
-        $this->syncStatusVariables($this->getState());
+        $this->syncStatusVariables($this->buildConnectionAwareState($this->getState()));
         $this->SetTimerInterval('KeepAliveTimer', 0);
-        $this->SetTimerInterval('ConnectionWatchdogTimer', 0);
+        $this->SetTimerInterval('ConnectionWatchdogTimer', 30000);
     }
 
     public function GetVisualizationTile(): string
@@ -108,6 +111,9 @@ class BambuConnect extends IPSModuleStrict
         $this->WriteAttributeString('LastPayload', $json);
         $this->WriteAttributeString('LastState', json_encode($state, JSON_UNESCAPED_UNICODE));
         $this->WriteAttributeInteger('LastPayloadTimestamp', time());
+        $this->WriteAttributeInteger('LastConnectionOnline', 1);
+
+        $state = $this->buildConnectionAwareState($state);
 
         $this->MaintainStatusVariables();
         $this->syncStatusVariables($state);
@@ -128,7 +134,18 @@ class BambuConnect extends IPSModuleStrict
 
     public function CheckConnection(): void
     {
-        // Legacy timer target kept as no-op for existing beta instances.
+        $state = $this->buildConnectionAwareState($this->getState());
+        $online = (bool)($state['connectionOnline'] ?? false);
+        $lastOnline = $this->ReadAttributeInteger('LastConnectionOnline') === 1;
+
+        if ($online === $lastOnline) {
+            return;
+        }
+
+        $this->WriteAttributeInteger('LastConnectionOnline', $online ? 1 : 0);
+        $this->syncStatusVariables($state);
+        $this->UpdateVisualizationValue(json_encode($this->buildPayload(), JSON_UNESCAPED_UNICODE));
+        $this->SendDebug('Verbindung', $online ? 'Online' : 'Offline', 0);
     }
 
     public function ReceiveData(string $JSONString): string
@@ -140,11 +157,7 @@ class BambuConnect extends IPSModuleStrict
         }
 
         if (array_key_exists('Payload', $data)) {
-            $topic = (string)($data['Topic'] ?? '');
             $payload = (string)$data['Payload'];
-            if (!$this->topicMatches($topic)) {
-                return '';
-            }
 
             if (function_exists('IPS_GetKernelDate') && IPS_GetKernelDate() > 1670886000) {
                 $payload = utf8_decode($payload);
@@ -206,7 +219,7 @@ class BambuConnect extends IPSModuleStrict
 
     private function buildPayload(): array
     {
-        $state = $this->getState();
+        $state = $this->buildConnectionAwareState($this->getState());
 
         return [
             'title' => $this->ReadPropertyString('TileTitle'),
@@ -219,34 +232,6 @@ class BambuConnect extends IPSModuleStrict
             'metrics' => $this->buildMetrics($state),
             'details' => $this->buildDetails($state)
         ];
-    }
-
-    private function topicMatches(string $topic): bool
-    {
-        $filter = $this->resolveMqttTopic();
-        if ($filter === '' || $topic === '') {
-            return true;
-        }
-
-        $pattern = preg_quote($filter, '/');
-        $pattern = str_replace(['\+', '\#'], ['[^/]+', '.*'], $pattern);
-        return preg_match('/^' . $pattern . '$/', $topic) === 1;
-    }
-
-    private function resolveMqttTopic(): string
-    {
-        $topic = trim($this->ReadPropertyString('MqttTopic'));
-        $serial = trim($this->ReadPropertyString('PrinterSerial'));
-
-        if ($topic === '') {
-            $topic = 'device/{SERIAL}/report';
-        }
-
-        if ($serial !== '') {
-            $topic = str_replace(['{SERIAL}', '%SERIAL%'], $serial, $topic);
-        }
-
-        return $topic;
     }
 
     private function formatPayloadPreview(string $payload): string
@@ -515,10 +500,25 @@ class BambuConnect extends IPSModuleStrict
         return is_array($state) ? array_replace($this->emptyState(), $state) : $this->emptyState();
     }
 
+    private function buildConnectionAwareState(array $state): array
+    {
+        $lastPayloadTimestamp = $this->ReadAttributeInteger('LastPayloadTimestamp');
+        $online = $lastPayloadTimestamp > 0 && (time() - $lastPayloadTimestamp) <= self::OFFLINE_TIMEOUT_SECONDS;
+
+        $state['connectionOnline'] = $online;
+        if (!$online) {
+            $state['status'] = 'OFFLINE';
+            $state['statusLabel'] = 'Offline';
+        }
+
+        return $state;
+    }
+
     private function emptyState(): array
     {
         return [
             'updatedAt' => '',
+            'connectionOnline' => false,
             'status' => '',
             'statusLabel' => 'Unbekannt',
             'printName' => 'Kein Druckauftrag',
